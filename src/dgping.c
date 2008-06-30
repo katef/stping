@@ -24,6 +24,8 @@
  * TODO: select can't predict the future. consider making everything nonblocking
  * TODO: i am ever suspicious about timing; confirm lengths are ok for select() loop.
  * TODO: make PINGTIME configurable by -i
+ * TODO: option to dump packet contents, tcpdump style, for visualisation.
+ * TODO: don't use stdint.h!
  */
 
 #define _XOPEN_SOURCE 600
