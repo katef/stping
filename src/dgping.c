@@ -26,6 +26,7 @@
  * TODO: make PINGTIME configurable by -i
  * TODO: option to dump packet contents, tcpdump style, for visualisation.
  * TODO: don't use stdint.h!
+ * TODO: keep going if IP vanishes (e.g. by DHCP); i.e. send() fails
  */
 
 #define _XOPEN_SOURCE 600
