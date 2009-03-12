@@ -11,6 +11,9 @@
  * in the packet contents to detect corruption, and a sequence number is used
  * to identify the order of responses.
  *
+ * SIGINFO causes current statistics to be written to stderr on the fly. The
+ * total statistics are printed to stdout when pinging is complete.
+ *
  * This program (and the associated daemon) targets XPG4.2, not POSIX.
  *
  * $Id$
@@ -24,9 +27,13 @@
  * TODO: select can't predict the future. consider making everything nonblocking
  * TODO: i am ever suspicious about timing; confirm lengths are ok for select() loop.
  * TODO: make PINGTIME configurable by -i
+ * TODO: make timeout configurable
+ * TODO: add "don't fragment" option
+ * TODO: add packet size option, filled with random data, for stress testing. checksum this, too.
  * TODO: option to dump packet contents, tcpdump style, for visualisation.
  * TODO: don't use stdint.h!
  * TODO: keep going if IP vanishes (e.g. by DHCP); i.e. send() fails
+ * TODO: i think the timing is wrong after handling a signal (e.g. SIGINFO)
  */
 
 #define _XOPEN_SOURCE 600
@@ -74,8 +81,9 @@ double stat_timemin = DBL_MAX;
 double stat_timesum;
 double stat_timesqr;
 
-/* A flag for the SIGTERM handler */
+/* flags for signal handlers */
 volatile sig_atomic_t shouldexit;
+volatile sig_atomic_t shouldinfo;
 
 
 /*
@@ -91,6 +99,11 @@ struct pending {
 static void
 exithandler(int s) {
 	shouldexit = 1;
+}
+
+static void
+infohandler(int s) {
+	shouldinfo = 1;
 }
 
 /*
@@ -292,14 +305,14 @@ culltimeouts(struct pending **p)
 }
 
 static void
-printstats(void)
+printstats(FILE *f)
 {
 	double avg;
 	double variance;
 
-	printf("\n- DGRAM Ping Statistics -\n");
+	assert(f != NULL);
 
-	printf("%u transmitted, "
+	fprintf(f, "%u transmitted, "
 		   "%u received, "
 		   "%u timed out, "
 		   "%u disregarded, "
@@ -315,14 +328,14 @@ printstats(void)
 	avg = stat_timesum / stat_recieved;
 
 	if (stat_recieved == 1) {
-		printf("round-trip min/avg/max = "
+		fprintf(stderr, "round-trip min/avg/max = "
 			   "%.3f/%.3f/%.3f\n",
 			stat_timemin, avg, stat_timemax);
 	} else {
 		variance = (stat_timesqr - stat_recieved * pow(avg, 2))
 			/ (stat_recieved - 1);
 
-		printf("round-trip min/avg/max/stddev = "
+		fprintf(stderr, "round-trip min/avg/max/stddev = "
 			   "%.3f/%.3f/%.3f/%.3f ms\n",
 			stat_timemin, avg, stat_timemax, sqrt(variance));
 	}
@@ -341,6 +354,11 @@ main(int argc, char **argv)
 	uint16_t seq;
 	struct pending *p;
 	struct sockaddr_in sin;
+
+	if (SIG_ERR == signal(SIGINFO, infohandler)) {
+		perror("signal");
+		return EXIT_FAILURE;
+	}
 
 	if (SIG_ERR == signal(SIGINT, exithandler)) {
 		perror("signal");
@@ -407,6 +425,12 @@ main(int argc, char **argv)
 		do {
 			struct timeval before, after;
 			fd_set rfds;
+
+			if (shouldinfo) {
+				printstats(stderr);
+				shouldinfo = 0;
+			}
+
 			if (-1 == gettimeofday(&before, NULL)) {
 				perror("gettimeofday");
 				exit(EXIT_FAILURE);
@@ -483,7 +507,8 @@ main(int argc, char **argv)
 		culltimeouts(&p);
 	}
 
-	printstats();
+	printf("\n- DGRAM Ping Statistics -\n");
+	printstats(stdout);
 
 	/* NOTREACHED */
 	return EXIT_FAILURE;
