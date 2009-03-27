@@ -58,6 +58,14 @@
 
 #include "common.h"
 
+/*
+ * Linux defines SIGINFO as "A synonym for SIGPWR" according to signal(7), but
+ * does not actually #define it in <signal.h>.
+ */
+#if defined(__linux__) && !defined(SIGINFO)
+# define SIGINFO SIGPWR
+#endif
+
 extern char *optarg;
 extern int optind;
 
