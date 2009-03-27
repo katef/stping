@@ -95,6 +95,11 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (0 != setvbuf(stdout, NULL, _IOLBF, 0)) {
+		perror("setvbuf");
+		return EXIT_FAILURE;
+	}
+
 	/* TODO find "TCP" automatically */
 	printf("listening on %s:%s %s\n", argv[1], argv[2], "TCP/IP");
 
