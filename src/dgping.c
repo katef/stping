@@ -419,6 +419,11 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+	if (0 != setvbuf(stderr, NULL, _IOLBF, 0)) {
+		perror("setvbuf");
+		return EXIT_FAILURE;
+	}
+
 	p = NULL;
 	for (seq = 0; !shouldexit; seq++) {
 		int r;
