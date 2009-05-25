@@ -262,7 +262,7 @@ recvecho(int s, struct pending **p)
 
 		dtv = xtimersub(&now, &(*curr)->t);
 		d = tvtoms(&dtv);
-		assert(d > 0);
+		assert(d >= 0);
 
 		printf("%d bytes from %s seq=%d time=%.3f ms\n",
 			(int) strlen(buf) + 1, inet_ntoa(sin.sin_addr), seq, d);
