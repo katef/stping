@@ -12,7 +12,7 @@
  * to identify the order of responses.
  *
  * SIGINFO causes current statistics to be written to stderr on the fly. The
- * total statistics are printed to stdout when pinging is complete.
+ * total statistics are also printed to stderr when pinging is complete.
  *
  * This program (and the associated daemon) targets XPG4.2, not POSIX.
  *
@@ -315,14 +315,12 @@ culltimeouts(struct pending **p)
 }
 
 static void
-printstats(FILE *f)
+printstats(void)
 {
 	double avg;
 	double variance;
 
-	assert(f != NULL);
-
-	fprintf(f, "%u transmitted, "
+	fprintf(stderr, "%u transmitted, "
 		   "%u received, "
 		   "%u timed out, "
 		   "%u disregarded, "
@@ -462,7 +460,7 @@ main(int argc, char **argv)
 			fd_set rfds;
 
 			if (shouldinfo) {
-				printstats(stderr);
+				printstats();
 				shouldinfo = 0;
 			}
 
@@ -546,7 +544,7 @@ main(int argc, char **argv)
 	}
 
 	printf("\n- DGRAM Ping Statistics -\n");
-	printstats(stdout);	/* XXX: to stderr instead */
+	printstats();
 
 	/* NOTREACHED */
 	return EXIT_FAILURE;
