@@ -1,8 +1,8 @@
+/* $Id$ */
+
 /*
  * Routines common to ctping and ctpingd.
  * TODO assertions all over
- *
- * $Id$
  */
 
 #define _XOPEN_SOURCE 600

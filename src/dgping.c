@@ -1,3 +1,5 @@
+/* $Id$ */
+
 /*
  * SOCK_DGRAM echo ping. This illustrates the following effects:
  *
@@ -15,8 +17,6 @@
  * total statistics are also printed to stderr when pinging is complete.
  *
  * This program (and the associated daemon) targets XPG4.2, not POSIX.
- *
- * $Id$
  */
 
 /*

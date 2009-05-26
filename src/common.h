@@ -1,7 +1,7 @@
+/* $Id$ */
+
 /*
  * Routines common to ctping and ctpingd.
- *
- * $Id$
  */
 
 #ifndef DG_COMMON_H
