@@ -543,7 +543,7 @@ main(int argc, char **argv)
 		culltimeouts(&p);
 	}
 
-	printf("\n- DGRAM Ping Statistics -\n");
+	fprintf(stderr, "\n- DGRAM Ping Statistics -\n");
 	printstats();
 
 	/* NOTREACHED */
