@@ -34,6 +34,8 @@
  * TODO: don't use stdint.h!
  * TODO: keep going if IP vanishes (e.g. by DHCP); i.e. send() fails
  * TODO: i think the timing is wrong after handling a signal (e.g. SIGINFO)
+ * TODO: consider sigaction instead of signal and siginterrupt
+ * TODO: print the number which are pending in the stats
  */
 
 #define _XOPEN_SOURCE 600
@@ -76,7 +78,7 @@ extern int optind;
  */
 #define TIMEOUT  5.0 * 1000.0
 #define PINGTIME 0.5 * 1000.0
-#define CULLTIME 5
+#define CULLTIME 6
 
 /* Variables for logging statistics */
 unsigned int stat_sent;
@@ -404,6 +406,21 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+	if (-1 == siginterrupt(SIGINT, 1)) {
+		perror("siginterrupt");
+		return EXIT_FAILURE;
+	}
+
+	if (-1 == siginterrupt(SIGALRM, 1)) {
+		perror("siginterrupt");
+		return EXIT_FAILURE;
+	}
+
+	if (-1 == siginterrupt(SIGINFO, 1)) {
+		perror("siginterrupt");
+		return EXIT_FAILURE;
+	}
+
 	s = getaddr(argv[0], argv[1], &sin);
 	if (-1 == s) {
 		return EXIT_FAILURE;
@@ -504,6 +521,9 @@ main(int argc, char **argv)
 		}
 	}
 
+	/* XXX: race */
+	shouldexit = 0;
+
 	/*
 	 * Continue waiting for any pending responses, until either they remain or
 	 * timeout. In either case, the pending queue becomes empty. If no pending
@@ -526,7 +546,7 @@ main(int argc, char **argv)
 	}
 
 	printf("\n- DGRAM Ping Statistics -\n");
-	printstats(stdout);
+	printstats(stdout);	/* XXX: to stderr instead */
 
 	/* NOTREACHED */
 	return EXIT_FAILURE;
