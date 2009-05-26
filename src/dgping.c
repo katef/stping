@@ -34,7 +34,6 @@
  * TODO: don't use stdint.h!
  * TODO: keep going if IP vanishes (e.g. by DHCP); i.e. send() fails
  * TODO: i think the timing is wrong after handling a signal (e.g. SIGINFO)
- * TODO: consider sigaction instead of signal and siginterrupt
  * TODO: print the number which are pending in the stats
  */
 
@@ -107,13 +106,20 @@ struct pending {
 };
 
 static void
-exithandler(int s) {
-	shouldexit = 1;
-}
+sighandler(int s) {
+	switch (s) {
+	case SIGINFO:
+		shouldinfo = 1;
+		break;
 
-static void
-infohandler(int s) {
-	shouldinfo = 1;
+	case SIGINT:
+		shouldexit = 1;
+		break;
+
+	case SIGALRM: /* handled just for EINTR */
+	default:
+		return;
+	}
 }
 
 /*
@@ -362,16 +368,17 @@ main(int argc, char **argv)
 	uint16_t seq;
 	struct pending *p;
 	struct sockaddr_in sin;
+	struct sigaction sigact;
+	sigset_t set;
 
-	if (SIG_ERR == signal(SIGINFO, infohandler)) {
-		perror("signal");
-		return EXIT_FAILURE;
-	}
+	sigemptyset(&set);
+	(void) sigaddset(&set, SIGINT);
+	(void) sigaddset(&set, SIGINFO);
+	(void) sigaddset(&set, SIGALRM);
 
-	if (SIG_ERR == signal(SIGINT, exithandler)) {
-		perror("signal");
-		return EXIT_FAILURE;
-	}
+	sigact.sa_handler = sighandler;
+	sigact.sa_mask    = set;
+	sigact.sa_flags   = 0;
 
 	/* Handle CLI options */
 	count = 0;
@@ -404,21 +411,6 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (-1 == siginterrupt(SIGINT, 1)) {
-		perror("siginterrupt");
-		return EXIT_FAILURE;
-	}
-
-	if (-1 == siginterrupt(SIGALRM, 1)) {
-		perror("siginterrupt");
-		return EXIT_FAILURE;
-	}
-
-	if (-1 == siginterrupt(SIGINFO, 1)) {
-		perror("siginterrupt");
-		return EXIT_FAILURE;
-	}
-
 	s = getaddr(argv[0], argv[1], &sin);
 	if (-1 == s) {
 		return EXIT_FAILURE;
@@ -436,6 +428,16 @@ main(int argc, char **argv)
 
 	if (0 != setvbuf(stderr, NULL, _IOLBF, 0)) {
 		perror("setvbuf");
+		return EXIT_FAILURE;
+	}
+
+	if (-1 == sigaction(SIGINFO, &sigact, NULL)) {
+		perror("sigaction");
+		return EXIT_FAILURE;
+	}
+
+	if (-1 == sigaction(SIGINT, &sigact, NULL)) {
+		perror("sigaction");
 		return EXIT_FAILURE;
 	}
 
@@ -527,8 +529,8 @@ main(int argc, char **argv)
 	 * timeout. In either case, the pending queue becomes empty. If no pending
 	 * responses arrive, the alarm() call provides a timeout to exit.
 	 */
-	if (SIG_ERR == signal(SIGALRM, exithandler)) {
-		perror("signal");
+	if (-1 == sigaction(SIGALRM, &sigact, NULL)) {
+		perror("sigaction");
 		return EXIT_FAILURE;
 	}
 
