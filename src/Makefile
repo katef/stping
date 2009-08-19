@@ -1,10 +1,15 @@
 # $Id$
 
+# This is an example SOCK_DGRAM client-server application.
+# To build with C-THRU sockets, build with:
+#   CFLAGS=-DUSE_CTHRU make
+#
+
 #CC=cc
-#CFLAGS=
+#CFLAGS+=
 
 CC=gcc
-CFLAGS=-Wall -pedantic -ansi -O2
+CFLAGS+=-Wall -pedantic -ansi -O2
 
 TARGETS=common.o
 

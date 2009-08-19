@@ -8,6 +8,10 @@
 
 #define _XOPEN_SOURCE 600
 
+#ifdef USE_CTHRU
+#include <cthru/socket.h>
+#endif
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

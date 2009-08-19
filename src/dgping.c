@@ -39,6 +39,10 @@
 
 #define _XOPEN_SOURCE 600
 
+#ifdef USE_CTHRU
+#include <cthru/socket.h>
+#endif
+
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/time.h>
