@@ -24,9 +24,8 @@
  * TODO: count out-of-order packets
  * TODO: gethostbyname for argv[1]
  * TODO: any other syscalls for EINTR?
- * TODO: select can't predict the future. consider making everything nonblocking
+ * TODO: select can't predict the future. consider making everything non-blocking
  * TODO: i am ever suspicious about timing; confirm lengths are ok for select() loop.
- * TODO: make PINGTIME configurable by -i
  * TODO: make timeout configurable
  * TODO: add "don't fragment" option
  * TODO: add packet size option, filled with random data, for stress testing. checksum this, too.
@@ -80,7 +79,7 @@ extern int optind;
  * is the length of time to wait for unanswered pings.
  */
 #define TIMEOUT  5.0 * 1000.0
-#define PINGTIME 0.5 * 1000.0
+#define INTERVAL 0.5 * 1000.0
 #define CULLTIME 6
 
 /* Variables for logging statistics */
@@ -110,7 +109,8 @@ struct pending {
 };
 
 static void
-sighandler(int s) {
+sighandler(int s)
+{
 	switch (s) {
 	case SIGINFO:
 		shouldinfo = 1;
@@ -130,7 +130,8 @@ sighandler(int s) {
  * Calculate the difference a given time and the current time; a - b.
  */
 static struct timeval
-xtimersub(struct timeval *a, struct timeval *b) {
+xtimersub(struct timeval *a, struct timeval *b)
+{
 	struct timeval t;
 
 	t.tv_sec  = a->tv_sec  - b->tv_sec;
@@ -142,6 +143,32 @@ xtimersub(struct timeval *a, struct timeval *b) {
 	}
 
 	return t;
+}
+
+/*
+ * Check validity of a timeval structure, adjusting it if necessary. This is
+ * provided for convenience of inaccurate arithmetic around the limits of
+ * floating point calculations, to permit ping internals at fractions of a
+ * second without unnecessarily complex.error-checking around select().
+ *
+ * Since negative values in this program are only ever produced by floating
+ * point inaccuracies, they will always be small (to the order of epsilon or
+ * so), and hence are just set to 0, if present.
+ *
+ * See SUS3 <sys/types.h>'s specification for a discussion of valid values here.
+ */
+static void
+xitimerfix(struct timeval *tv)
+{
+	assert(tv->tv_usec <= 1000000);
+
+	if (tv->tv_sec < 0) {
+		tv->tv_sec = 0;
+	}
+
+	if (tv->tv_usec < 0) {
+		tv->tv_usec = 0;
+	}
 }
 
 static void
@@ -199,7 +226,7 @@ findpending(uint16_t seq, struct pending **p)
 }
 
 /*
- * Convert a timeval struct to miliseconds.
+ * Convert a timeval struct to milliseconds.
  */
 static double
 tvtoms(struct timeval *tv)
@@ -234,9 +261,12 @@ recvecho(int s, struct pending **p)
 	struct pending **curr;
 	socklen_t sinsz;
 	uint16_t seq;
+	int r;
 
    	sinsz = sizeof sin;
-	if (-1 == recvfrom(s, buf, sizeof buf, 0, (void *) &sin, &sinsz)) {
+	r = recvfrom(s, buf, sizeof buf, 0, (void *) &sin, &sinsz);
+
+	if (-1 == r) {
 		switch (errno) {
 		case EINTR:
 		case ENOBUFS:
@@ -246,6 +276,9 @@ recvecho(int s, struct pending **p)
 			perror("recvecho");
 			return;
 		}
+	}
+
+	if (0 == r) {
 	}
 
 	stat_recieved++;
@@ -361,7 +394,8 @@ printstats(void)
 
 static void
 usage(void) {
-	fprintf(stderr, "usage: dgping [ -c <count> ] <address> <port>\n");
+	fprintf(stderr, "usage: dgping [ -c <count> ] [ -i interval ] "
+		"<address> <port>\n");
 }
 
 int
@@ -374,6 +408,7 @@ main(int argc, char **argv)
 	struct sockaddr_in sin;
 	struct sigaction sigact;
 	sigset_t set;
+	double interval;
 
 	sigemptyset(&set);
 	(void) sigaddset(&set, SIGINT);
@@ -384,17 +419,28 @@ main(int argc, char **argv)
 	sigact.sa_mask    = set;
 	sigact.sa_flags   = 0;
 
+	/* defaults */
+	interval = INTERVAL;
+
 	/* Handle CLI options */
 	count = 0;
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hc:")) != -1) {
+		while ((c = getopt(argc, argv, "hc:i:")) != -1) {
 			switch (c) {
 			case 'c':
 				count = atoi(optarg);
 				if (count <= 0) {
 					fprintf(stderr, "Invalid ping count\n");
+					return EXIT_FAILURE;
+				}
+				break;
+
+			case 'i':
+				interval = atof(optarg) * 1000.0;
+				if (interval < DBL_EPSILON) {
+					fprintf(stderr, "Invalid ping interval\n");
 					return EXIT_FAILURE;
 				}
 				break;
@@ -453,14 +499,15 @@ main(int argc, char **argv)
 		sendecho(s, &p, seq);
 
 		/*
-		 * This loop is responsible for two things: delaying for the PINGTIME
-		 * interval, whilst dealing with any incoming responses as and when
-		 * they appear. The latter must be as timely as possible, so it may
-		 * interrupt the delay.
+		 * This loop is responsible for two things: delaying for 'interval',
+		 * whilst dealing with any incoming responses as and when they appear.
+		 * The latter must be as timely as possible, so it may interrupt the
+		 * interval delay.
 		 *
 		 * Once the delay is complete, a new ping is sent.
 		 */
-		t = mstotv(PINGTIME);
+		t = mstotv(interval);
+		xitimerfix(&t);
 		do {
 			struct timeval before, after;
 			fd_set rfds;
@@ -480,7 +527,7 @@ main(int argc, char **argv)
 			r = select(s + 1, &rfds, NULL, NULL, &t);
 			switch (r) {
 			case 0:
-				/* PINGTIME reached */
+				/* interval reached */
 				continue;
 
 			case -1:
@@ -501,8 +548,9 @@ main(int argc, char **argv)
 					struct timeval elapsed;
 
 					elapsed = xtimersub(&after, &before);
-					t = mstotv(PINGTIME);
+					t = mstotv(interval);
 					t = xtimersub(&t, &elapsed);
+					xitimerfix(&t);
 				}
 
 				continue;
