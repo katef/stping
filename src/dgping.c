@@ -261,12 +261,9 @@ recvecho(int s, struct pending **p)
 	struct pending **curr;
 	socklen_t sinsz;
 	uint16_t seq;
-	int r;
 
    	sinsz = sizeof sin;
-	r = recvfrom(s, buf, sizeof buf, 0, (void *) &sin, &sinsz);
-
-	if (-1 == r) {
+	if (-1 == recvfrom(s, buf, sizeof buf, 0, (void *) &sin, &sinsz)) {
 		switch (errno) {
 		case EINTR:
 		case ENOBUFS:
@@ -276,9 +273,6 @@ recvecho(int s, struct pending **p)
 			perror("recvecho");
 			return;
 		}
-	}
-
-	if (0 == r) {
 	}
 
 	stat_recieved++;
