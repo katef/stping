@@ -591,6 +591,8 @@ main(int argc, char **argv)
 		culltimeouts(&p);
 	}
 
+	close(s);
+
 	fprintf(stderr, "\n- DGRAM Ping Statistics -\n");
 	printstats();
 
