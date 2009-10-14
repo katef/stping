@@ -387,6 +387,41 @@ printstats(void)
 }
 
 static void
+printstats_stdout(void)
+{
+	double avg;
+	double variance;
+
+	fprintf(stdout, "%u transmitted, "
+		   "%u received, "
+		   "%u timed out, "
+		   "%u disregarded, "
+		   "%.1f%% packet loss\n",
+		stat_sent, stat_recieved, stat_timedout, stat_ignored,
+		(stat_sent - stat_recieved) * 100.0 / stat_sent);
+
+	if (stat_recieved == 0) {
+		return;
+	}
+
+	/* Calculate statistics */
+	avg = stat_timesum / stat_recieved;
+
+	if (stat_recieved == 1) {
+		fprintf(stdout, "round-trip min/avg/max = "
+			   "%.3f/%.3f/%.3f\n",
+			stat_timemin, avg, stat_timemax);
+	} else {
+		variance = (stat_timesqr - stat_recieved * pow(avg, 2))
+			/ (stat_recieved - 1);
+
+		fprintf(stdout, "round-trip min/avg/max/stddev = "
+			   "%.3f/%.3f/%.3f/%.3f ms\n",
+			stat_timemin, avg, stat_timemax, sqrt(variance));
+	}
+}
+
+static void
 usage(void) {
 	fprintf(stderr, "usage: dgping [ -c <count> ] [ -i interval ] "
 		"<address> <port>\n");
@@ -593,8 +628,8 @@ main(int argc, char **argv)
 
 	close(s);
 
-	fprintf(stderr, "\n- DGRAM Ping Statistics -\n");
-	printstats();
+	fprintf(stdout, "\n- DGRAM Ping Statistics -\n");
+	printstats_stdout();
 
 	/* NOTREACHED */
 	return EXIT_FAILURE;
