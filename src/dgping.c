@@ -352,12 +352,14 @@ culltimeouts(struct pending **p)
 }
 
 static void
-printstats(void)
+printstats(FILE *f)
 {
 	double avg;
 	double variance;
 
-	fprintf(stderr, "%u transmitted, "
+	assert(f != NULL);
+
+	fprintf(f, "%u transmitted, "
 		   "%u received, "
 		   "%u timed out, "
 		   "%u disregarded, "
@@ -373,49 +375,14 @@ printstats(void)
 	avg = stat_timesum / stat_recieved;
 
 	if (stat_recieved == 1) {
-		fprintf(stderr, "round-trip min/avg/max = "
+		fprintf(f, "round-trip min/avg/max = "
 			   "%.3f/%.3f/%.3f\n",
 			stat_timemin, avg, stat_timemax);
 	} else {
 		variance = (stat_timesqr - stat_recieved * pow(avg, 2))
 			/ (stat_recieved - 1);
 
-		fprintf(stderr, "round-trip min/avg/max/stddev = "
-			   "%.3f/%.3f/%.3f/%.3f ms\n",
-			stat_timemin, avg, stat_timemax, sqrt(variance));
-	}
-}
-
-static void
-printstats_stdout(void)
-{
-	double avg;
-	double variance;
-
-	fprintf(stdout, "%u transmitted, "
-		   "%u received, "
-		   "%u timed out, "
-		   "%u disregarded, "
-		   "%.1f%% packet loss\n",
-		stat_sent, stat_recieved, stat_timedout, stat_ignored,
-		(stat_sent - stat_recieved) * 100.0 / stat_sent);
-
-	if (stat_recieved == 0) {
-		return;
-	}
-
-	/* Calculate statistics */
-	avg = stat_timesum / stat_recieved;
-
-	if (stat_recieved == 1) {
-		fprintf(stdout, "round-trip min/avg/max = "
-			   "%.3f/%.3f/%.3f\n",
-			stat_timemin, avg, stat_timemax);
-	} else {
-		variance = (stat_timesqr - stat_recieved * pow(avg, 2))
-			/ (stat_recieved - 1);
-
-		fprintf(stdout, "round-trip min/avg/max/stddev = "
+		fprintf(f, "round-trip min/avg/max/stddev = "
 			   "%.3f/%.3f/%.3f/%.3f ms\n",
 			stat_timemin, avg, stat_timemax, sqrt(variance));
 	}
@@ -542,7 +509,7 @@ main(int argc, char **argv)
 			fd_set rfds;
 
 			if (shouldinfo) {
-				printstats();
+				printstats(stderr);
 				shouldinfo = 0;
 			}
 
@@ -629,7 +596,7 @@ main(int argc, char **argv)
 	close(s);
 
 	fprintf(stdout, "\n- DGRAM Ping Statistics -\n");
-	printstats_stdout();
+	printstats(stdout);
 
 	/* NOTREACHED */
 	return EXIT_FAILURE;
