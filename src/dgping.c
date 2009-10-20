@@ -352,37 +352,46 @@ culltimeouts(struct pending **p)
 }
 
 static void
-printstats(FILE *f)
+printstats(FILE *f, int multiline)
 {
 	double avg;
 	double variance;
 
 	assert(f != NULL);
 
-	fprintf(f, "%u transmitted, "
-		   "%u received, "
-		   "%u timed out, "
-		   "%u disregarded, "
-		   "%.1f%% packet loss\n",
+	fprintf(f, multiline ? "%u transmitted, "
+	                       "%u received, "
+	                       "%u timed out, "
+	                       "%u disregarded, "
+	                       "%.1f%% packet loss"
+	                     : "%u/%u packets, "
+	                       "%u timed out, "
+	                       "%u disregarded, "
+	                       "%.1f%% loss",
 		stat_sent, stat_recieved, stat_timedout, stat_ignored,
 		(stat_sent - stat_recieved) * 100.0 / stat_sent);
 
 	if (stat_recieved == 0) {
+		fprintf(f, "\n");
 		return;
 	}
+
+	fprintf(f, multiline ? "\n"
+	                       "round-trip "
+	                     : ", ");
 
 	/* Calculate statistics */
 	avg = stat_timesum / stat_recieved;
 
 	if (stat_recieved == 1) {
-		fprintf(f, "round-trip min/avg/max = "
+		fprintf(f, "min/avg/max = "
 			   "%.3f/%.3f/%.3f\n",
 			stat_timemin, avg, stat_timemax);
 	} else {
 		variance = (stat_timesqr - stat_recieved * pow(avg, 2))
 			/ (stat_recieved - 1);
 
-		fprintf(f, "round-trip min/avg/max/stddev = "
+		fprintf(f, "min/avg/max/stddev = "
 			   "%.3f/%.3f/%.3f/%.3f ms\n",
 			stat_timemin, avg, stat_timemax, sqrt(variance));
 	}
@@ -509,7 +518,7 @@ main(int argc, char **argv)
 			fd_set rfds;
 
 			if (shouldinfo) {
-				printstats(stderr);
+				printstats(stderr, 0);
 				shouldinfo = 0;
 			}
 
@@ -596,7 +605,7 @@ main(int argc, char **argv)
 	close(s);
 
 	fprintf(stdout, "\n- DGRAM Ping Statistics -\n");
-	printstats(stdout);
+	printstats(stdout, 1);
 
 	/* NOTREACHED */
 	return EXIT_FAILURE;
