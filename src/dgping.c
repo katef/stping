@@ -47,6 +47,8 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <assert.h>
 #include <unistd.h>
 #include <float.h>
 #include <stdio.h>
@@ -159,7 +161,7 @@ xtimersub(struct timeval *a, struct timeval *b)
 static void
 xitimerfix(struct timeval *tv)
 {
-	ct_assert(tv->tv_usec <= 1000000);
+	assert(tv->tv_usec <= 1000000);
 
 	if (tv->tv_sec < 0) {
 		tv->tv_sec = 0;
@@ -300,7 +302,7 @@ recvecho(int s, struct pending **p)
 
 		dtv = xtimersub(&now, &(*curr)->t);
 		d = tvtoms(&dtv);
-		ct_assert(d >= 0);
+		assert(d >= 0);
 
 		printf("%d bytes from %s seq=%d time=%.3f ms\n",
 			(int) strlen(buf) + 1, inet_ntoa(sin.sin_addr), seq, d);
@@ -356,7 +358,7 @@ printstats(FILE *f, int multiline)
 	double avg;
 	double variance;
 
-	ct_assert(f != NULL);
+	assert(f != NULL);
 
 	fprintf(f, multiline ? "%u transmitted, "
 	                       "%u received, "

@@ -14,6 +14,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdarg.h>
