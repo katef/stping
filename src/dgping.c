@@ -368,7 +368,7 @@ printstats(FILE *f, int multiline)
 	                     : "%u/%u packets, "
 	                       "%u timed out, "
 	                       "%u disregarded, "
-	                       "%.1f%% loss",
+	                       "%.1f%% loss\n",
 		stat_sent, stat_recieved, stat_timedout, stat_ignored,
 		(stat_sent - stat_recieved) * 100.0 / stat_sent);
 
