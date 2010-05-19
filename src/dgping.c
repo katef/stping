@@ -38,6 +38,11 @@
 
 #define _XOPEN_SOURCE 600
 
+/* for SIGINFO */
+#if defined(__APPLE__)
+# define _DARWIN_C_SOURCE
+#endif
+
 #ifdef USE_CTHRU
 #include <cthru/socket.h>
 #endif
