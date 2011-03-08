@@ -105,8 +105,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	/* TODO find "TCP" automatically */
-	printf("listening on %s:%s %s\n", argv[1], argv[2], "TCP/IP");
+	/* TODO find "UDP" automatically */
+	printf("listening on %s:%s %s\n", argv[1], argv[2], "UDP/IP");
 
 	for (;;) {
 		uint16_t seq;
