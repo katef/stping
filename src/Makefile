@@ -1,6 +1,6 @@
 # $Id$
 
-# This is an example SOCK_DGRAM client-server application.
+# This is an example SOCK_STREAM client-server application.
 # To build with C-THRU sockets, build with:
 #   CFLAGS=-DUSE_CTHRU make
 #

@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * Routines common to ctping and ctpingd.
+ * Routines common to stping and stpingd.
  * TODO assertions all over
  */
 
@@ -173,9 +173,9 @@ getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
 
 	/* Socket */
 #ifdef USE_CTHRU
-	s = socket(PF_CTHRU, SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(PF_CTHRU, SOCK_STREAM, IPPROTO_TCP);
 #else
-	s = socket(PF_INET,  SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(PF_INET,  SOCK_STREAM, IPPROTO_TCP);
 #endif
 	if (-1 == s) {
 		perror("socket");

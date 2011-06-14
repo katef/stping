@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * SOCK_DGRAM echo ping. This illustrates the following effects:
+ * SOCK_STREAM echo ping. This illustrates the following effects:
  *
  * - Dropped packets
  * - Corruption
@@ -405,7 +405,7 @@ printstats(FILE *f, int multiline)
 
 static void
 usage(void) {
-	fprintf(stderr, "usage: dgping [ -c <count> ] [ -i interval ] "
+	fprintf(stderr, "usage: stping [ -c <count> ] [ -i interval ] "
 		"<address> <port>\n");
 }
 
@@ -610,7 +610,7 @@ main(int argc, char **argv)
 
 	close(s);
 
-	fprintf(stdout, "\n- DGRAM Ping Statistics -\n");
+	fprintf(stdout, "\n- STREAM Ping Statistics -\n");
 	printstats(stdout, 1);
 
 	/* NOTREACHED */

@@ -1,7 +1,5 @@
-/* $Id$ */
-
 /*
- * SOCK_DGRAN echo ping daemon.
+ * SOCK_STREAM echo ping daemon.
  *
  * Ping repsonses are sent back to the source port of the ping client.
  */
@@ -22,8 +20,23 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "common.h"
+
+#define PING_LENGTH (1024)
+
+/*
+ * A linked-list of inbound ping requests.
+ */
+struct connection {
+	int socket;
+	char buf[PING_LENGTH];
+	int p;
+
+	struct connection *next;
+};
+
 
 static int
 bindon(int s, struct sockaddr_in *sin)
@@ -42,14 +55,75 @@ bindon(int s, struct sockaddr_in *sin)
 		return -1;
 	}
 
+	if (-1 == listen(s, 1)) {
+		perror("listen");
+		close(s);
+		return -1;
+	}
+
 	return s;
 }
 
-static int
-recvecho(int s, uint16_t *seq, struct sockaddr_in *sin, socklen_t sinsz)
+static struct connection *
+findcon(int s, struct connection **head)
 {
+	struct connection **current;
+
+	assert(s != -1);
+	assert(head != NULL);
+
+    for (current = head; *current != NULL; current = &(*current)->next) {
+        if ((*current)->socket == s) {
+            return *current;
+        }
+    }
+
+	{
+		*current = malloc(sizeof **current);
+		if (*current == NULL) {
+    		return NULL;
+		}
+	}
+
+    return *current;
+}
+
+static void
+removecon(int s, struct connection **head)
+{
+    struct connection *tmp;
+	struct connection **current;
+
+	assert(s != -1);
+	assert(head != NULL);
+
+	for (current = head; *current != NULL; current = &(*current)->next) {
+		if((*current)->socket == s) {
+			tmp = *current;
+	 		*current = (*current)->next;
+			free(tmp);
+		}
+	}
+
+}
+
+
+/*
+ * Handle an inbound echo. 
+ * Read as much as possible and validate.
+ */
+static int
+recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin, socklen_t sinsz)
+{
+
 	char buf[1024];
+	struct connection *new;
 	ssize_t r;
+	int p;
+
+	assert(head != NULL);
+
+	new = findcon(s, head);
 
 	r = recvfrom(s, buf, sizeof buf, 0, (void *) sin, &sinsz);
 	if (-1 == r) {
@@ -57,11 +131,29 @@ recvecho(int s, uint16_t *seq, struct sockaddr_in *sin, socklen_t sinsz)
 		return 0;
 	}
 
-	if (1 != validate(buf, seq)) {
+	if (r == 0) {
+		return EOF;
+	}
+
+	/* TODO: use memcpy or something */
+	for (p = 0; p < r; p++) {
+		new->buf[new->p + p] = buf[p];
+	}
+
+	new->p += r;
+	
+	if (1 != validate(new->buf, seq)) {
 		return 0;
 	}
 
-	printf("%d bytes from %s seq=%d\n", (int) strlen(buf) + 1, inet_ntoa(sin->sin_addr), *seq);
+	/* 
+	 * We've validated the ping at this point so reset the pointer
+     * into the buffer.
+	 */	
+	new->p = 0;
+
+	printf("%d bytes from %s seq=%d\n", (int) strlen(new->buf) + 1, inet_ntoa(sin->sin_addr), *seq);
+
 	return 1;
 }
 
@@ -80,11 +172,20 @@ sendecho(int s, uint16_t seq, struct sockaddr_in *sin)
 int
 main(int argc, char *argv[])
 {
+	int i;
 	int s;
 	struct sockaddr_in sin;
+	struct connection *head;
+
+	fd_set active;
+	fd_set read;
+
+	socklen_t size;
+
+	head = NULL;
 
 	if (3 != argc) {
-		fprintf(stderr, "usage: dgpingd <address> <port>\n");
+		fprintf(stderr, "usage: stpingd <address> <port>\n");
 		return EXIT_FAILURE;
 	}
 
@@ -105,16 +206,55 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	/* TODO find "UDP" automatically */
-	printf("listening on %s:%s %s\n", argv[1], argv[2], "UDP/IP");
+	/* TODO find "TCP" automatically */
+	printf("listening on %s:%s %s\n", argv[1], argv[2], "TCP/IP");
+
+	FD_ZERO (&active);
+	FD_SET (s, &active);	
 
 	for (;;) {
-		uint16_t seq;
-		struct sockaddr_in sin;	/* TODO: scope: rename */
 
-		if (1 == recvecho(s, &seq, &sin, sizeof sin)) {
-			sendecho(s, seq, &sin);
-		}
+		read = active;
+		/* select on our server socket and all our clients */
+		if (select(FD_SETSIZE, &read, NULL, NULL, NULL) < 0) {
+			perror ("select");
+			return EXIT_FAILURE;
+		} 
+
+		for (i = 0; i < FD_SETSIZE; ++i)
+             if (FD_ISSET (i, &read)) {
+                 if (i == s) { 
+					/* accept new socket connection */ 
+					int c; 
+
+					printf("New client added.\n");	
+					size = sizeof (sin);
+					c = accept (s, (struct sockaddr *) &sin, &size);
+
+					if (c < 0) { 
+						perror ("accept"); 
+						return EXIT_FAILURE;
+					} 
+
+					FD_SET (c, &active); 
+				} else {
+					/* ping! */ 
+					int r;
+					uint16_t seq;
+					struct sockaddr_in sin;
+					printf("Client needs reading.\n"); 
+					r = recvecho(&head, i, &seq, &sin, sizeof sin);
+
+					if (1 == r) { 
+						sendecho(i, seq, &sin);
+					} else if (EOF == r) {
+						printf("Dropping client.\n");
+						FD_CLR (i, &active);
+						removecon(i, &head);					
+					}
+				}
+		 } 
+
 	}
 
 	/* NOTREACHED */
