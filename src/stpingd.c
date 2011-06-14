@@ -125,6 +125,10 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 
 	new = findcon(s, head);
 
+	if (NULL == new) {
+		return EOF;
+	}
+
 	r = recvfrom(s, buf, sizeof buf, 0, (void *) sin, &sinsz);
 	if (-1 == r) {
 		perror("recvfrom");
@@ -251,6 +255,7 @@ main(int argc, char *argv[])
 						printf("Dropping client.\n");
 						FD_CLR (i, &active);
 						removecon(i, &head);					
+						close(i);
 					}
 				}
 		 } 
