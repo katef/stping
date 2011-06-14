@@ -314,6 +314,7 @@ recvecho(int s, struct pending **p)
 			exit(EXIT_FAILURE);
 		}
 
+		saddrsz = sizeof (*saddr);
 		if (getpeername(s, (struct sockaddr *)saddr, &saddrsz)) {
 			perror("getpeername");
 			exit(EXIT_FAILURE);

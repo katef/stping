@@ -139,6 +139,7 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 		return EOF;
 	}
 
+	sinsz = sizeof (*sin);
 	if (getpeername(s, (struct sockaddr *)sin, &sinsz)) {
 		perror("getpeername");
 		return 0;
