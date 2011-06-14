@@ -263,13 +263,12 @@ static void
 recvecho(int s, struct pending **p)
 {
 	char buf[3 + 5 + 24 + 2];
-   	struct sockaddr_in sin;
 	struct pending **curr;
-	socklen_t sinsz;
+	struct sockaddr_in *saddr;
+	socklen_t saddrsz;
 	uint16_t seq;
 
-   	sinsz = sizeof sin;
-	if (-1 == recvfrom(s, buf, sizeof buf, 0, (void *) &sin, &sinsz)) {
+	if (-1 == recv(s, buf, sizeof buf, 0)) {
 		switch (errno) {
 		case EINTR:
 		case ENOBUFS:
@@ -309,8 +308,19 @@ recvecho(int s, struct pending **p)
 		d = tvtoms(&dtv);
 		assert(d >= 0);
 
+		saddr = malloc(sizeof *saddr);
+		if(NULL == saddr) {
+			perror("malloc");
+			exit(EXIT_FAILURE);
+		}
+
+		if (getpeername(s, (struct sockaddr *)saddr, &saddrsz)) {
+			perror("getpeername");
+			exit(EXIT_FAILURE);
+		}
+
 		printf("%d bytes from %s seq=%d time=%.3f ms\n",
-			(int) strlen(buf) + 1, inet_ntoa(sin.sin_addr), seq, d);
+			(int) strlen(buf) + 1, inet_ntoa(saddr->sin_addr), seq, d);
 
 		stat_timesum += d;
 		stat_timesqr += pow(d, 2);

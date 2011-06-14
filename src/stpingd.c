@@ -120,7 +120,6 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 	char buf[1024];
 	struct connection *new;
 	ssize_t r;
-	int p;
 
 	assert(head != NULL);
 
@@ -130,7 +129,7 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 		return EOF;
 	}
 
-	r = recvfrom(s, buf, sizeof buf, 0, (void *) sin, &sinsz);
+	r = recv(s, buf, sizeof buf, 0);
 	if (-1 == r) {
 		perror("recvfrom");
 		return 0;
@@ -140,11 +139,12 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 		return EOF;
 	}
 
-	/* TODO: use memcpy or something */
-	for (p = 0; p < r; p++) {
-		new->buf[new->p + p] = buf[p];
+	if (getpeername(s, (struct sockaddr *)sin, &sinsz)) {
+		perror("getpeername");
+		return 0;
 	}
 
+	memcpy(new->buf + new->p, buf, r);
 	new->p += r;
 	
 	if (1 != validate(new->buf, seq)) {
