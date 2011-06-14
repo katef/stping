@@ -13,15 +13,15 @@ CFLAGS+=-Wall -pedantic -ansi -O2
 
 TARGETS=common.o
 
-all: dgping dgpingd
+all: stping stpingd
 
 clean:
-	rm -f dgping dgpingd dgping.o dgpingd.o $(TARGETS)
+	rm -f stping stpingd stping.o stpingd.o $(TARGETS)
 
 
-dgping: dgping.o $(TARGETS)
-	$(CC) -o dgping dgping.o $(TARGETS) -lm
+stping: stping.o $(TARGETS)
+	$(CC) -o stping stping.o $(TARGETS) -lm
 
-dgpingd: dgpingd.o $(TARGETS)
-	$(CC) -o dgpingd dgpingd.o $(TARGETS)
+stpingd: stpingd.o $(TARGETS)
+	$(CC) -o stpingd stpingd.o $(TARGETS)
 
