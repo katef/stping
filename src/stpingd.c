@@ -164,13 +164,13 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 }
 
 static void
-sendecho(int s, uint16_t seq, struct sockaddr_in *sin)
+sendecho(int s, uint16_t seq)
 {
 	const char *buf;
 
 	buf = mkping(seq);
 
-	if (-1 == sendto(s, buf, strlen(buf) + 1, 0, (void *) sin, sizeof *sin)) {
+	if (-1 == send(s, buf, strlen(buf) + 1, 0)) {
 		perror("sendto");
 	}
 }
@@ -233,7 +233,6 @@ main(int argc, char *argv[])
 					/* accept new socket connection */ 
 					int c; 
 
-					printf("New client added.\n");	
 					size = sizeof (sin);
 					c = accept (s, (struct sockaddr *) &sin, &size);
 
@@ -248,13 +247,11 @@ main(int argc, char *argv[])
 					int r;
 					uint16_t seq;
 					struct sockaddr_in sin;
-					printf("Client needs reading.\n"); 
 					r = recvecho(&head, i, &seq, &sin, sizeof sin);
 
 					if (1 == r) { 
-						sendecho(i, seq, &sin);
+						sendecho(i, seq);
 					} else if (EOF == r) {
-						printf("Dropping client.\n");
 						FD_CLR (i, &active);
 						removecon(i, &head);					
 						close(i);

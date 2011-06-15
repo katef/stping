@@ -177,7 +177,7 @@ xitimerfix(struct timeval *tv)
 	}
 }
 
-static void
+static int
 sendecho(int s, struct pending **p, uint16_t seq)
 {
 	const char *buf;
@@ -193,7 +193,7 @@ sendecho(int s, struct pending **p, uint16_t seq)
 
 		default:
 			perror("send");
-			return;
+			return 1;
 		}
 	}
 
@@ -215,6 +215,8 @@ sendecho(int s, struct pending **p, uint16_t seq)
 	new->seq = seq;
 
 	*p = new;
+
+	return 0;
 }
 
 static struct pending **
@@ -268,7 +270,14 @@ recvecho(int s, struct pending **p)
 	socklen_t saddrsz;
 	uint16_t seq;
 
-	if (-1 == recv(s, buf, sizeof buf, 0)) {
+	int c = recv(s, buf, sizeof buf, 0);
+
+	if(0 == c) {
+		perror("recv");
+        exit(EXIT_FAILURE);
+	}
+
+	if (-1 == c) {
 		switch (errno) {
 		case EINTR:
 		case ENOBUFS:
@@ -334,6 +343,8 @@ recvecho(int s, struct pending **p)
 	}
 
 	removepending(curr);
+
+	return;
 }
 
 /*
@@ -518,7 +529,9 @@ main(int argc, char **argv)
 		int r;
 		struct timeval t;
 
-		sendecho(s, &p, seq);
+		if (sendecho(s, &p, seq)) {
+			break;
+		}
 
 		/*
 		 * This loop is responsible for two things: delaying for 'interval',
