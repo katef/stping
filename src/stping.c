@@ -193,7 +193,7 @@ sendecho(int s, struct pending **p, uint16_t seq)
 
 		default:
 			perror("send");
-			return 1;
+			return 0;
 		}
 	}
 
@@ -216,7 +216,7 @@ sendecho(int s, struct pending **p, uint16_t seq)
 
 	*p = new;
 
-	return 0;
+	return 1;
 }
 
 static struct pending **
@@ -343,8 +343,6 @@ recvecho(int s, struct pending **p)
 	}
 
 	removepending(curr);
-
-	return;
 }
 
 /*
@@ -529,7 +527,7 @@ main(int argc, char **argv)
 		int r;
 		struct timeval t;
 
-		if (sendecho(s, &p, seq)) {
+		if (!sendecho(s, &p, seq)) {
 			break;
 		}
 
