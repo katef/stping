@@ -36,7 +36,9 @@
  * TODO: print the number which are pending in the stats
  */
 
-#define _XOPEN_SOURCE 500
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE 500
+#endif
 
 /* for SIGINFO */
 #if defined(__APPLE__)
@@ -74,6 +76,13 @@
  */
 #if defined(__linux__) && !defined(SIGINFO)
 # define SIGINFO SIGPWR
+#endif
+
+/*
+ * Opensolaris has no convention for SIGINFO so we're arbitrarily using SIGUSR1.
+ */
+#if defined(__sun)
+# define SIGINFO SIGUSR1
 #endif
 
 extern char *optarg;
@@ -242,18 +251,20 @@ tvtoms(struct timeval *tv)
 	return tv->tv_usec / 1000.0 + tv->tv_sec * 1000.0;
 }
 
+#if __STDC_VERSION__ - 0 < 199901L
 int
 round(double x)
 {
-	assert(x >= LONG_MIN-0.5);
-	assert(x <= LONG_MAX+0.5);
+	assert(x >= LONG_MIN - 0.5);
+	assert(x <= LONG_MAX + 0.5);
 
 	if (x >= 0) {
-		return (long) (x+0.5);
-	} 
-
-	return (long) (x-0.5);
+		return (long) (x + 0.5);
+	} else { 
+		return (long) (x - 0.5);
+	}
 }
+#endif
 
 static struct timeval
 mstotv(double ms) {

@@ -5,7 +5,9 @@
  * TODO assertions all over
  */
 
-#define _XOPEN_SOURCE 500
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE 500
+#endif
 
 #if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
 # undef  HAVE_SALEN
