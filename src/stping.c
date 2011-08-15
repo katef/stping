@@ -36,7 +36,7 @@
  * TODO: print the number which are pending in the stats
  */
 
-#define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 500
 
 /* for SIGINFO */
 #if defined(__APPLE__)
@@ -240,6 +240,19 @@ static double
 tvtoms(struct timeval *tv)
 {
 	return tv->tv_usec / 1000.0 + tv->tv_sec * 1000.0;
+}
+
+int
+round(double x)
+{
+	assert(x >= LONG_MIN-0.5);
+	assert(x <= LONG_MAX+0.5);
+
+	if (x >= 0) {
+		return (long) (x+0.5);
+	} 
+
+	return (long) (x-0.5);
 }
 
 static struct timeval

@@ -5,7 +5,16 @@
  * TODO assertions all over
  */
 
-#define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 500
+
+#if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
+# undef  HAVE_SALEN
+#elif defined(__sun)
+# undef  HAVE_SALEN
+#else
+# define HAVE_SALEN
+#endif
+
 
 #ifdef USE_CTHRU
 #include <cthru/socket.h>
@@ -169,6 +178,9 @@ getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
 		sin->sin_family = AF_INET;
 		sin->sin_port = htons(p);
 		sin->sin_addr.s_addr = a;
+#ifdef HAVE_SALEN
+		sin->sin_len = sizeof (*sin);
+#endif
 	}
 
 	/* Socket */
