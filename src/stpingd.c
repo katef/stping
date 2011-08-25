@@ -29,6 +29,8 @@
 
 #define PING_LENGTH (1024)
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 /*
  * A linked-list of inbound ping requests.
  */
@@ -75,35 +77,35 @@ findcon(int s, struct connection **head)
 	assert(s != -1);
 	assert(head != NULL);
 
-    for (current = head; *current != NULL; current = &(*current)->next) {
-        if ((*current)->socket == s) {
-            return *current;
-        }
-    }
+	for (current = head; *current != NULL; current = &(*current)->next) {
+		if ((*current)->socket == s) {
+			return *current;
+		}
+	}
 
 	{
 		*current = malloc(sizeof **current);
 		if (*current == NULL) {
-    		return NULL;
+			return NULL;
 		}
 	}
 
-    return *current;
+	return *current;
 }
 
 static void
 removecon(int s, struct connection **head)
 {
-    struct connection *tmp;
+	struct connection *tmp;
 	struct connection **current;
 
 	assert(s != -1);
 	assert(head != NULL);
 
 	for (current = head; *current != NULL; current = &(*current)->next) {
-		if((*current)->socket == s) {
+		if ((*current)->socket == s) {
 			tmp = *current;
-	 		*current = (*current)->next;
+			*current = (*current)->next;
 			free(tmp);
 		}
 	}
@@ -126,7 +128,6 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 	assert(head != NULL);
 
 	new = findcon(s, head);
-
 	if (NULL == new) {
 		return EOF;
 	}
@@ -141,8 +142,8 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 		return EOF;
 	}
 
-	sinsz = sizeof (*sin);
-	if (getpeername(s, (struct sockaddr *)sin, &sinsz)) {
+	sinsz = sizeof *sin;
+	if (-1 == getpeername(s, (struct sockaddr *) sin, &sinsz)) {
 		perror("getpeername");
 		return 0;
 	}
@@ -156,7 +157,7 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 
 	/* 
 	 * We've validated the ping at this point so reset the pointer
-     * into the buffer.
+	 * into the buffer.
 	 */	
 	new->p = 0;
 
@@ -180,15 +181,9 @@ sendecho(int s, uint16_t seq)
 int
 main(int argc, char *argv[])
 {
-	int i;
 	int s;
 	struct sockaddr_in sin;
 	struct connection *head;
-
-	fd_set active;
-	fd_set read;
-
-	socklen_t size;
 
 	head = NULL;
 
@@ -217,50 +212,67 @@ main(int argc, char *argv[])
 	/* TODO find "TCP" automatically */
 	printf("listening on %s:%s %s\n", argv[1], argv[2], "TCP/IP");
 
-	FD_ZERO (&active);
-	FD_SET (s, &active);	
+	{
+		fd_set master;
+		int maxfd;
 
-	for (;;) {
+		FD_ZERO(&master);
+		FD_SET(s, &master);	
 
-		read = active;
-		/* select on our server socket and all our clients */
-		if (select(FD_SETSIZE, &read, NULL, NULL, NULL) < 0) {
-			perror ("select");
-			return EXIT_FAILURE;
-		} 
+		maxfd = s;
 
-		for (i = 0; i < FD_SETSIZE; ++i)
-             if (FD_ISSET (i, &read)) {
-                 if (i == s) { 
-					/* accept new socket connection */ 
-					int c; 
+		for (;;) {
+			int i;
+			fd_set curr;
 
-					size = sizeof (sin);
-					c = accept (s, (struct sockaddr *) &sin, &size);
+			curr = master;
 
-					if (c < 0) { 
-						perror ("accept"); 
-						return EXIT_FAILURE;
-					} 
+			/* select on our server socket and all our clients */
+			if (-1 == select(maxfd + 1, &curr, NULL, NULL, NULL)) {
+				perror("select");
+				return EXIT_FAILURE;
+			} 
 
-					FD_SET (c, &active); 
-				} else {
-					/* ping! */ 
-					int r;
-					uint16_t seq;
-					struct sockaddr_in sin;
-					r = recvecho(&head, i, &seq, &sin, sizeof sin);
+			if (FD_ISSET(s, &curr)) {
+				socklen_t size;
+				int peer; 
 
-					if (1 == r) { 
-						sendecho(i, seq);
-					} else if (EOF == r) {
-						FD_CLR (i, &active);
-						removecon(i, &head);					
-						close(i);
-					}
+				size = sizeof sin;
+				peer = accept(s, (struct sockaddr *) &sin, &size);
+				if (peer < 0) { 
+					perror ("accept"); 
+					return EXIT_FAILURE;
+				} 
+
+				FD_SET(peer, &master); 
+				maxfd = MAX(maxfd, peer);
+				continue;
+			}
+
+			for (i = 0; i < FD_SETSIZE; ++i) {
+				int r;
+				uint16_t seq;
+				struct sockaddr_in sin;
+
+				if (i == s || !FD_ISSET(i, &curr)) {
+					continue;
 				}
-		 } 
 
+				r = recvecho(&head, i, &seq, &sin, sizeof sin);
+				if (r == 0) {
+					continue;
+				}
+
+				if (r == EOF) {
+					FD_CLR(i, &master);
+					removecon(i, &head);					
+					close(i);
+					continue;
+				}
+
+				sendecho(i, seq);
+			}
+		}
 	}
 
 	/* NOTREACHED */
