@@ -246,10 +246,9 @@ main(int argc, char *argv[])
 
 				FD_SET(peer, &master); 
 				maxfd = MAX(maxfd, peer);
-				continue;
 			}
 
-			for (i = 0; i < FD_SETSIZE; ++i) {
+			for (i = 0; i <= maxfd; ++i) {
 				int r;
 				uint16_t seq;
 				struct sockaddr_in sin;
