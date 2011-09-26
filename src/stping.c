@@ -659,7 +659,6 @@ main(int argc, char **argv)
 	fprintf(stdout, "\n- STREAM Ping Statistics -\n");
 	printstats(stdout, 1);
 
-	/* NOTREACHED */
-	return EXIT_FAILURE;
+	return EXIT_SUCCESS;
 }
 
