@@ -27,17 +27,17 @@
 
 #include "common.h"
 
-#define PING_LENGTH (1024)
-
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /*
  * A linked-list of inbound ping requests.
  */
 struct connection {
+	struct sockaddr_storage ss;
 	int socket;
-	char buf[PING_LENGTH];
-	int p;
+
+	char buf[3 + 5 + 24 + 2];
+	size_t len;
 
 	struct connection *next;
 };
@@ -70,12 +70,37 @@ bindon(int s, struct sockaddr_in *sin)
 }
 
 static struct connection *
-findcon(int s, struct connection **head)
+newcon(struct connection **head, int s, struct sockaddr *sa, socklen_t sz)
+{
+	struct connection *new;
+
+	assert(head != NULL);
+	assert(s != -1);
+	assert(sa != NULL);
+	assert(sz > 0);
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		perror("malloc");
+		return NULL;
+	}
+
+	new->socket = s;
+	new->len = sizeof new->buf - 1;
+
+	memcpy(&new->ss, sa, sz);
+
+	new->next = *head;
+	*head = new;
+}
+
+static struct connection *
+findcon(struct connection **head, int s)
 {
 	struct connection **current;
 
-	assert(s != -1);
 	assert(head != NULL);
+	assert(s != -1);
 
 	for (current = head; *current != NULL; current = &(*current)->next) {
 		if ((*current)->socket == s) {
@@ -83,24 +108,17 @@ findcon(int s, struct connection **head)
 		}
 	}
 
-	{
-		*current = malloc(sizeof **current);
-		if (*current == NULL) {
-			return NULL;
-		}
-	}
-
-	return *current;
+	return NULL;
 }
 
 static void
-removecon(int s, struct connection **head)
+removecon(struct connection **head, int s)
 {
 	struct connection *tmp;
 	struct connection **current;
 
-	assert(s != -1);
 	assert(head != NULL);
+	assert(s != -1);
 
 	for (current = head; *current != NULL; current = &(*current)->next) {
 		if ((*current)->socket == s) {
@@ -109,73 +127,88 @@ removecon(int s, struct connection **head)
 			free(tmp);
 		}
 	}
-
 }
 
-
-/*
- * Handle an inbound echo. 
- * Read as much as possible and validate.
- */
 static int
-recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin, socklen_t sinsz)
+recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin)
 {
-
-	char buf[1024];
-	struct connection *new;
+	struct connection *conn;
 	ssize_t r;
 
 	assert(head != NULL);
 
-	new = findcon(s, head);
-	if (NULL == new) {
-		return EOF;
+	conn = findcon(head, s);
+
+	assert(conn != NULL);
+
+	r = recv(s, conn->buf + (sizeof conn->buf - 1 - conn->len), conn->len, 0);
+	if (r == -1) {
+		switch (errno) {
+		case EINTR:
+			return 0;
+
+		default:
+			perror("recv");
+			return -1;
+		}
 	}
 
-	r = recv(s, buf, sizeof buf, 0);
-	if (-1 == r) {
-		perror("recvfrom");
+	assert(r >= 0);
+	assert(r <= conn->len);
+
+	conn->len -= r;
+
+	if (conn->len > 0) {
 		return 0;
 	}
 
-	if (r == 0) {
-		return EOF;
-	}
+	conn->len = sizeof conn->buf - 1;
 
-	sinsz = sizeof *sin;
-	if (-1 == getpeername(s, (struct sockaddr *) sin, &sinsz)) {
-		perror("getpeername");
+	conn->buf[sizeof conn->buf - 1] = '\0';
+
+	if (1 != validate(conn->buf, seq)) {
 		return 0;
 	}
 
-	memcpy(new->buf + new->p, buf, r);
-	new->p += r;
-	
-	if (1 != validate(new->buf, seq)) {
-		return 0;
-	}
-
-	/* 
-	 * We've validated the ping at this point so reset the pointer
-	 * into the buffer.
-	 */	
-	new->p = 0;
-
-	printf("%d bytes from %s seq=%d\n", (int) strlen(new->buf) + 1, inet_ntoa(sin->sin_addr), *seq);
+	printf("%d bytes from %s seq=%d\n",
+		(int) strlen(conn->buf), inet_ntoa(sin->sin_addr), (int) *seq);
 
 	return 1;
 }
 
-static void
+static int
 sendecho(int s, uint16_t seq)
 {
 	const char *buf;
+	size_t len;
 
 	buf = mkping(seq);
+	len = strlen(buf);
 
-	if (-1 == send(s, buf, strlen(buf) + 1, 0)) {
-		perror("sendto");
+	while (len > 0) {
+		ssize_t r;
+
+		r = send(s, buf, len, 0);
+		if (r == -1) {
+			switch (errno) {
+			case ENOBUFS:
+			case EINTR:
+				continue;
+
+			default:
+				perror("send");
+				return -1;
+			}
+		}
+
+		assert(r >= 0);
+		assert(r <= len);
+
+		len -= r;
+		buf += r;
 	}
+
+	return 0;
 }
 
 int
@@ -234,38 +267,47 @@ main(int argc, char *argv[])
 			} 
 
 			if (FD_ISSET(s, &curr)) {
+				struct sockaddr_storage ss;
+				struct connection *new;
 				socklen_t size;
 				int peer; 
 
-				size = sizeof sin;
-				peer = accept(s, (struct sockaddr *) &sin, &size);
-				if (peer < 0) { 
+				size = sizeof ss;
+
+				peer = accept(s, (struct sockaddr *) &ss, &size);
+				if (peer < 0) {
 					perror ("accept"); 
 					return EXIT_FAILURE;
-				} 
+				}
+
+				assert(size <= sizeof ss);
+
+				new = newcon(&head, peer, (struct sockaddr *) &ss, size);
+				if (new == NULL) {
+					return EXIT_FAILURE;
+				}
 
 				FD_SET(peer, &master); 
 				maxfd = MAX(maxfd, peer);
 			}
 
 			for (i = 0; i <= maxfd; ++i) {
-				int r;
 				uint16_t seq;
-				struct sockaddr_in sin;
+				int r;
 
 				if (i == s || !FD_ISSET(i, &curr)) {
 					continue;
 				}
 
-				r = recvecho(&head, i, &seq, &sin, sizeof sin);
-				if (r == 0) {
+				r = recvecho(&head, i, &seq, &sin);
+				if (r == -1) {
+					FD_CLR(i, &master);
+					removecon(&head, i);					
+					close(i);
 					continue;
 				}
 
-				if (r == EOF) {
-					FD_CLR(i, &master);
-					removecon(i, &head);					
-					close(i);
+				if (r == 0) {
 					continue;
 				}
 

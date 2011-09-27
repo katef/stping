@@ -186,48 +186,6 @@ xitimerfix(struct timeval *tv)
 	}
 }
 
-static int
-sendecho(int s, struct pending **p, uint16_t seq)
-{
-	const char *buf;
-	struct pending *new;
-
-	buf = mkping(seq);
-
-	while (-1 == send(s, buf, strlen(buf) + 1, 0)) {
-		switch (errno) {
-		case EINTR:
-		case ENOBUFS:
-			continue;
-
-		default:
-			perror("send");
-			return 0;
-		}
-	}
-
-	stat_sent++;
-
-	/* Add this request to the list of pings pending responses */
-	new = malloc(sizeof *new);
-	if (NULL == new) {
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
-
-	if (-1 == gettimeofday(&new->t, NULL)) {
-		perror("gettimeofday");
-		exit(EXIT_FAILURE);
-	}
-
-	new->next = *p;
-	new->seq = seq;
-
-	*p = new;
-
-	return 1;
-}
-
 static struct pending **
 findpending(uint16_t seq, struct pending **p)
 {
@@ -285,46 +243,114 @@ removepending(struct pending **p)
 	free(tmp);
 }
 
-static void
-recvecho(int s, struct pending **p)
+static int
+sendecho(int s, struct pending **p, uint16_t seq)
+{
+	const char *buf;
+	size_t len;
+
+	buf = mkping(seq);
+	len = strlen(buf);
+
+	while (len > 0) {
+		ssize_t r;
+
+		r = send(s, buf, len, 0);
+		if (r == -1) {
+			switch (errno) {
+			case ENOBUFS:
+			case EINTR:
+				continue;
+
+			default:
+				perror("send");
+				return -1;
+			}
+		}
+
+		assert(r >= 0);
+		assert(r <= len);
+
+		len -= r;
+		buf += r;
+	}
+
+	stat_sent++;
+
+	/* Add this request to the list of pings pending responses */
+	{
+		struct pending *new;
+
+		new = malloc(sizeof *new);
+		if (NULL == new) {
+			perror("malloc");
+			exit(EXIT_FAILURE);
+		}
+
+		if (-1 == gettimeofday(&new->t, NULL)) {
+			perror("gettimeofday");
+			exit(EXIT_FAILURE);
+		}
+
+		new->next = *p;
+		new->seq  = seq;
+
+		*p = new;
+	}
+
+	return 0;
+}
+
+static int
+recvecho(int s, struct pending **p, struct sockaddr_in *sin)
 {
 	char buf[3 + 5 + 24 + 2];
 	struct pending **curr;
-	struct sockaddr_in *saddr;
-	socklen_t saddrsz;
 	uint16_t seq;
+	size_t len;
 
-	int c = recv(s, buf, sizeof buf, 0);
+	assert(s != -1);
+	assert(p != NULL);
+	assert(sin != NULL);
 
-	if(0 == c) {
-		perror("recv");
-        exit(EXIT_FAILURE);
-	}
+	len = sizeof buf - 1;
 
-	if (-1 == c) {
-		switch (errno) {
-		case EINTR:
-		case ENOBUFS:
-			return;
+	while (len > 0) {
+		ssize_t r;
 
-		default:
-			perror("recvecho");
-			return;
+		r = recv(s, buf + (sizeof buf - 1 - len), len, 0);
+
+		if (r == -1) {
+			switch (errno) {
+			case EINTR:
+				continue;
+
+			default:
+				perror("recv");
+				return -1;
+			}
 		}
+
+		assert(r >= 0);
+		assert(r <= len);
+
+		len -= r;
 	}
+
+	buf[sizeof buf - 1] = '\0';
 
 	stat_recieved++;
 
 	if (1 != validate(buf, &seq)) {
 		stat_ignored++;
-		return;
+		return 0;
 	}
 
 	curr = findpending(seq, p);
 	if (curr == NULL) {
 		fprintf(stderr, "disregarding: sequence %d not pending response\n", seq);
 		stat_ignored++;
-		return;
+		return 0;
 	}
 
 	/* Calculate round-trip delta for this particular seq ID */
@@ -341,20 +367,8 @@ recvecho(int s, struct pending **p)
 		d = tvtoms(&dtv);
 		assert(d >= 0);
 
-		saddr = malloc(sizeof *saddr);
-		if(NULL == saddr) {
-			perror("malloc");
-			exit(EXIT_FAILURE);
-		}
-
-		saddrsz = sizeof (*saddr);
-		if (getpeername(s, (struct sockaddr *)saddr, &saddrsz)) {
-			perror("getpeername");
-			exit(EXIT_FAILURE);
-		}
-
 		printf("%d bytes from %s seq=%d time=%.3f ms\n",
-			(int) strlen(buf) + 1, inet_ntoa(saddr->sin_addr), seq, d);
+			(int) strlen(buf), inet_ntoa(sin->sin_addr), (int) seq, d);
 
 		stat_timesum += d;
 		stat_timesqr += pow(d, 2);
@@ -367,6 +381,8 @@ recvecho(int s, struct pending **p)
 	}
 
 	removepending(curr);
+
+	return 0;
 }
 
 /*
@@ -548,12 +564,13 @@ main(int argc, char **argv)
 
 	p = NULL;
 	for (seq = 0; !shouldexit; seq++) {
-		int r;
 		struct timeval t;
+		int r;
 
-		if (!sendecho(s, &p, seq)) {
+		if (-1 == sendecho(s, &p, seq)) {
 			break;
 		}
+
 
 		/*
 		 * This loop is responsible for two things: delaying for 'interval',
@@ -563,9 +580,13 @@ main(int argc, char **argv)
 		 *
 		 * Once the delay is complete, a new ping is sent.
 		 */
+
 		t = mstotv(interval);
 		xitimerfix(&t);
-		do {
+
+		r = -1;
+
+		while (!shouldexit && r != 0) {
 			struct timeval before, after;
 			fd_set rfds;
 
@@ -581,6 +602,7 @@ main(int argc, char **argv)
 
 			FD_ZERO(&rfds);
 			FD_SET(s, &rfds);
+
 			r = select(s + 1, &rfds, NULL, NULL, &t);
 			switch (r) {
 			case 0:
@@ -593,7 +615,9 @@ main(int argc, char **argv)
 			default:
 				/* handle activity */
 				if (FD_ISSET(s, &rfds)) {
-					recvecho(s, &p);
+					if (-1 == recvecho(s, &p, &sin)) {
+						continue;
+					}
 				}
 
 				if (-1 == gettimeofday(&after, NULL)) {
@@ -621,7 +645,7 @@ main(int argc, char **argv)
 				perror("select");
 				return EXIT_FAILURE;
 			}
-		} while (!shouldexit && 0 != r);
+		}
 
 		culltimeouts(&p);
 
@@ -649,7 +673,7 @@ main(int argc, char **argv)
 	}
 
 	while (!shouldexit && p != NULL) {
-		recvecho(s, &p);
+		recvecho(s, &p, &sin);
 
 		culltimeouts(&p);
 	}
