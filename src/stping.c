@@ -3,9 +3,7 @@
 /*
  * SOCK_STREAM echo ping. This illustrates the following effects:
  *
- * - Dropped packets
  * - Corruption
- * - Out of order responses
  * - Duplicate packets
  *
  * Pending responses are stored in a simple linked list; these are removed
@@ -26,7 +24,6 @@
  * TODO: any other syscalls for EINTR?
  * TODO: select can't predict the future. consider making everything non-blocking
  * TODO: i am ever suspicious about timing; confirm lengths are ok for select() loop.
- * TODO: make timeout configurable
  * TODO: add "don't fragment" option
  * TODO: add packet size option, filled with random data, for stress testing. checksum this, too.
  * TODO: option to dump packet contents, tcpdump style, for visualisation.
@@ -89,13 +86,13 @@ extern char *optarg;
 extern int optind;
 
 /*
- * The time to timeout pending responses, and the time between pings.
- * Both times are given in milliseconds. Culltime (given in seconds)
- * is the length of time to wait for unanswered pings.
+ * The time to timeout pending responses, and the interval between pings.
+ * Both times are given in milliseconds. The cull factor (given as a multiple
+ * of the timeout) is the length of time to wait for unanswered pings.
  */
-#define TIMEOUT  5.0 * 1000.0
-#define INTERVAL 0.5 * 1000.0
-#define CULLTIME 6
+double timeout    = 5.0 * 1000.0;
+double interval   = 0.5 * 1000.0;
+double cullfactor = 1.25;
 
 /* Variables for logging statistics */
 unsigned int stat_sent;
@@ -391,7 +388,7 @@ recvecho(int s, struct pending **p, struct sockaddr_in *sin)
 }
 
 /*
- * Cull pending packets older than TIMEOUT seconds.
+ * Cull pending packets older than timeout seconds.
  */
 static void
 culltimeouts(struct pending **p)
@@ -411,7 +408,7 @@ culltimeouts(struct pending **p)
 
 		dtv = xtimersub(&now, &(*curr)->t);
 		d = tvtoms(&dtv);
-		if (d > TIMEOUT) {
+		if (d > timeout) {
 			stat_timedout++;
 			printf("timeout: seq=%d time=%.3f ms\n", (*curr)->seq, d);
 			removepending(curr);
@@ -470,8 +467,8 @@ printstats(FILE *f, int multiline)
 
 static void
 usage(void) {
-	fprintf(stderr, "usage: stping [ -c <count> ] [ -i interval ] "
-		"<address> <port>\n");
+	fprintf(stderr, "usage: stping [ -i <interval> ] [ -t <timeout> ] [ -u <cullfactor> ]\n"
+		"\t[ -c <count> ] <address> <port>\n");
 }
 
 int
@@ -484,7 +481,6 @@ main(int argc, char **argv)
 	struct sockaddr_in sin;
 	struct sigaction sigact;
 	sigset_t set;
-	double interval;
 
 	sigemptyset(&set);
 	(void) sigaddset(&set, SIGINT);
@@ -495,15 +491,12 @@ main(int argc, char **argv)
 	sigact.sa_mask    = set;
 	sigact.sa_flags   = 0;
 
-	/* defaults */
-	interval = INTERVAL;
-
 	/* Handle CLI options */
 	count = 0;
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hc:i:")) != -1) {
+		while ((c = getopt(argc, argv, "hc:i:t:u:")) != -1) {
 			switch (c) {
 			case 'c':
 				count = atoi(optarg);
@@ -515,10 +508,18 @@ main(int argc, char **argv)
 
 			case 'i':
 				interval = atof(optarg) * 1000.0;
-				if (interval < DBL_EPSILON) {
+				if (interval < DBL_EPSILON || interval < 0.001) {
 					fprintf(stderr, "Invalid ping interval\n");
 					return EXIT_FAILURE;
 				}
+				break;
+
+			case 't':
+				timeout = atof(optarg) * 1000.0;
+				break;
+
+			case 'u':
+				cullfactor = atof(optarg);
 				break;
 
 			case '?':
@@ -672,7 +673,7 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (-1 == alarm(CULLTIME)) {
+	if (-1 == alarm(timeout * cullfactor)) {
 		perror("alarm");
 		return EXIT_FAILURE;
 	}
