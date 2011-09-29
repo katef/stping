@@ -92,6 +92,8 @@ newcon(struct connection **head, int s, struct sockaddr *sa, socklen_t sz)
 
 	new->next = *head;
 	*head = new;
+
+	return new;
 }
 
 static struct connection *
