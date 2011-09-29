@@ -331,7 +331,12 @@ recvecho(int s, struct pending **p, struct sockaddr_in *sin)
 			}
 		}
 
-		assert(r >= 0);
+		if (r == 0) {
+			shouldexit = 1;
+			return -1;
+		}
+
+		assert(r >= 1);
 		assert(r <= len);
 
 		len -= r;
@@ -673,7 +678,7 @@ main(int argc, char **argv)
 	}
 
 	while (!shouldexit && p != NULL) {
-		recvecho(s, &p, &sin);
+		(void) recvecho(s, &p, &sin);
 
 		culltimeouts(&p);
 	}

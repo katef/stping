@@ -127,6 +127,7 @@ removecon(struct connection **head, int s)
 			tmp = *current;
 			*current = (*current)->next;
 			free(tmp);
+			return;
 		}
 	}
 }
@@ -155,7 +156,11 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 		}
 	}
 
-	assert(r >= 0);
+	if (r == 0) {
+		return -1;
+	}
+
+	assert(r >= 1);
 	assert(r <= conn->len);
 
 	conn->len -= r;
