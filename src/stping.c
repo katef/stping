@@ -301,43 +301,44 @@ sendecho(int s, struct pending **p, uint16_t seq)
 static int
 recvecho(int s, struct pending **p, struct sockaddr_in *sin)
 {
-	char buf[3 + 5 + 24 + 2];
+	static char buf[3 + 5 + 24 + 2];
+	static size_t len = sizeof buf - 1;
 	struct pending **curr;
 	uint16_t seq;
-	size_t len;
+	ssize_t r;
 
 	assert(s != -1);
 	assert(p != NULL);
 	assert(sin != NULL);
 
-	len = sizeof buf - 1;
+	r = recv(s, buf + (sizeof buf - 1 - len), len, 0);
+	if (r == -1) {
+		switch (errno) {
+		case EINTR:
+			return 0;
 
-	while (len > 0) {
-		ssize_t r;
-
-		r = recv(s, buf + (sizeof buf - 1 - len), len, 0);
-
-		if (r == -1) {
-			switch (errno) {
-			case EINTR:
-				continue;
-
-			default:
-				perror("recv");
-				return -1;
-			}
-		}
-
-		if (r == 0) {
-			shouldexit = 1;
+		default:
+			perror("recv");
 			return -1;
 		}
-
-		assert(r >= 1);
-		assert(r <= len);
-
-		len -= r;
 	}
+
+	if (r == 0) {
+		errno = ECONNRESET;
+		perror("recv");
+		return -1;
+	}
+
+	assert(r >= 1);
+	assert(r <= len);
+
+	len -= r;
+
+	if (len > 0) {
+		return 0;
+	}
+
+	len = sizeof buf - 1;
 
 	buf[sizeof buf - 1] = '\0';
 
@@ -384,7 +385,7 @@ recvecho(int s, struct pending **p, struct sockaddr_in *sin)
 
 	removepending(curr);
 
-	return 0;
+	return 1;
 }
 
 /*
@@ -476,11 +477,16 @@ main(int argc, char **argv)
 {
 	int s;
 	int count;
-	uint16_t seq;
 	struct pending *p;
 	struct sockaddr_in sin;
 	struct sigaction sigact;
 	sigset_t set;
+	int culling;
+	int status;
+
+	enum {
+		STATE_SEND, STATE_RECV, STATE_SELECT, STATE_CULL
+	} state;
 
 	sigemptyset(&set);
 	(void) sigaddset(&set, SIGINT);
@@ -568,37 +574,50 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	p = NULL;
-	for (seq = 0; !shouldexit; seq++) {
-		struct timeval t;
-		int r;
+	/*
+	 * This loop is responsible for two things: delaying for 'interval', whilst
+	 * dealing with any incoming responses as and when they appear. The latter
+	 * must be as timely as possible, so it may interrupt the interval delay.
+	 *
+	 * Once the delay is complete, a new ping is sent.
+	 *
+	 * On cleanup, the program enters a "culling" state, wherein it will
+	 * continue waiting for any pending responses, until either they arrive or
+	 * timeout. In either case, the pending queue becomes empty.
+	 *
+	 * If no pending responses arrive, the alarm() call provides a cut-off.
+	 */
 
-		if (-1 == sendecho(s, &p, seq)) {
-			break;
-		}
+	{
+		struct timeval before, after;
+		struct timeval remaining;
+		uint16_t seq;
 
+		p = NULL;
+		culling = 0;	/* TODO: merge into 'state'? */
+		state = STATE_SEND;
+		seq = 0;
+		status = EXIT_SUCCESS;
 
-		/*
-		 * This loop is responsible for two things: delaying for 'interval',
-		 * whilst dealing with any incoming responses as and when they appear.
-		 * The latter must be as timely as possible, so it may interrupt the
-		 * interval delay.
-		 *
-		 * Once the delay is complete, a new ping is sent.
-		 */
+		before = mstotv(interval);
 
-		t = mstotv(interval);
-		xitimerfix(&t);
-
-		r = -1;
-
-		while (!shouldexit && r != 0) {
-			struct timeval before, after;
+		while (!culling || p != NULL) {
 			fd_set rfds;
+			int r;
 
-			if (shouldinfo) {
-				printstats(stderr, 0);
-				shouldinfo = 0;
+			/* calculate remaining interval */
+			if (-1 == gettimeofday(&after, NULL)) {
+				perror("gettimeofday");
+				exit(EXIT_FAILURE);
+			}
+
+			{
+				struct timeval elapsed;
+
+				elapsed = xtimersub(&after, &before);
+				remaining = mstotv(interval);
+				remaining = xtimersub(&remaining, &elapsed);
+				xitimerfix(&remaining);
 			}
 
 			if (-1 == gettimeofday(&before, NULL)) {
@@ -606,82 +625,129 @@ main(int argc, char **argv)
 				exit(EXIT_FAILURE);
 			}
 
-			FD_ZERO(&rfds);
-			FD_SET(s, &rfds);
+			culltimeouts(&p);
 
-			r = select(s + 1, &rfds, NULL, NULL, &t);
-			switch (r) {
-			case 0:
-				/* interval reached */
+			switch (state) {
+			case STATE_SELECT:
+				FD_ZERO(&rfds);
+				FD_SET(s, &rfds);
+
+				r = select(s + 1, &rfds, NULL, NULL, &remaining);
+				if (r == -1 && errno == EINTR) {
+					break;
+				}
+
+				if (r == -1) {
+					perror("select");
+					status = EXIT_FAILURE;
+				}
+
+				if (r == 0) {
+					/* timeout */
+					state = culling ? STATE_SELECT : STATE_SEND;
+					continue;
+				}
+
+				assert(r == 1);
+				assert(FD_ISSET(s, &rfds));
+
+				/* TODO: buffer partial sends, and re-enter STATE_SEND */
+				state = STATE_RECV;
+
 				continue;
 
-			case -1:
-				break;
-
-			default:
-				/* handle activity */
-				if (FD_ISSET(s, &rfds)) {
-					if (-1 == recvecho(s, &p, &sin)) {
-						continue;
-					}
+			case STATE_RECV:
+				r = recvecho(s, &p, &sin);
+				if (r == -1 && errno == EINTR) {
+					break;
 				}
 
-				if (-1 == gettimeofday(&after, NULL)) {
-					perror("gettimeofday");
-					exit(EXIT_FAILURE);
+				if (r == -1) {
+					status = EXIT_FAILURE;
+					state = STATE_CULL;
+					continue;
 				}
 
+				if (r == 0) {
+					/* partial read */
+					state = STATE_SELECT;
+					continue;
+				}
+
+				assert(r == 1);
+
+				state = STATE_SELECT;
+
+				continue;
+
+			case STATE_SEND:
+				r = sendecho(s, &p, seq);
+				if (r == -1 && errno == EINTR) {
+					break;
+				}
+
+				if (r == -1) {
+					status = EXIT_FAILURE;
+					state = STATE_CULL;
+					continue;
+				}
+
+				assert(r == 0);
+
+				seq++;
+
+				if (count != 0 && seq >= count) {
+					state = STATE_CULL;
+					continue;
+				}
+
+				/* reset interval, for the next ping */
 				{
-					struct timeval elapsed;
-
-					elapsed = xtimersub(&after, &before);
-					t = mstotv(interval);
-					t = xtimersub(&t, &elapsed);
-					xitimerfix(&t);
+					remaining = mstotv(interval);
+					xitimerfix(&remaining);
 				}
 
+				state = STATE_SELECT;
+
+				continue;
+
+			case STATE_CULL:
+				culling = 1;
+
+				if (-1 == sigaction(SIGALRM, &sigact, NULL)) {
+					perror("sigaction");
+					return EXIT_FAILURE;
+				}
+
+				if (-1 == alarm(timeout * cullfactor)) {
+					perror("alarm");
+					return EXIT_FAILURE;
+				}
+
+				state = STATE_SELECT;
+
 				continue;
 			}
 
-			switch (errno) {
-			case EINTR:
-				continue;
 
-			default:
-				perror("select");
-				return EXIT_FAILURE;
+			/* dispatch interrupts */
+			{
+				if (shouldinfo) {
+					shouldinfo = 0;
+
+					printstats(stderr, 0);
+				}
+
+				if (shouldexit && culling) {
+					break;
+				}
+
+				if (shouldexit) {
+					shouldexit = 0;
+					culling    = 1;
+				}
 			}
 		}
-
-		culltimeouts(&p);
-
-		if (count != 0 && seq + 1 >= count) {
-			break;
-		}
-	}
-
-	/* XXX: race */
-	shouldexit = 0;
-
-	/*
-	 * Continue waiting for any pending responses, until either they remain or
-	 * timeout. In either case, the pending queue becomes empty. If no pending
-	 * responses arrive, the alarm() call provides a timeout to exit.
-	 */
-	if (-1 == sigaction(SIGALRM, &sigact, NULL)) {
-		perror("sigaction");
-		return EXIT_FAILURE;
-	}
-
-	if (-1 == alarm(timeout * cullfactor)) {
-		perror("alarm");
-		return EXIT_FAILURE;
-	}
-
-	while (!shouldexit && p != NULL) {
-		(void) recvecho(s, &p, &sin);
-
-		culltimeouts(&p);
 	}
 
 	close(s);
@@ -689,6 +755,6 @@ main(int argc, char **argv)
 	fprintf(stdout, "\n- STREAM Ping Statistics -\n");
 	printstats(stdout, 1);
 
-	return EXIT_SUCCESS;
+	return status;
 }
 
