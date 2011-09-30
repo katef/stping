@@ -632,84 +632,83 @@ main(int argc, char **argv)
 				FD_ZERO(&rfds);
 				FD_SET(s, &rfds);
 
-				r = select(s + 1, &rfds, NULL, NULL, &remaining);
-				if (r == -1 && errno == EINTR) {
-					break;
-				}
+				switch (select(s + 1, &rfds, NULL, NULL, &remaining)) {
+				case -1:
+					if (errno == EINTR) {
+						break;
+					}
 
-				if (r == -1) {
 					perror("select");
-					status = EXIT_FAILURE;
-				}
-
-				if (r == 0) {
+					exit(EXIT_FAILURE);
+				
+				case 0:
 					/* timeout */
 					state = culling ? STATE_SELECT : STATE_SEND;
 					continue;
-				}
 
-				assert(r == 1);
-				assert(FD_ISSET(s, &rfds));
+				case 1:
+					assert(FD_ISSET(s, &rfds));
 
-				/* TODO: buffer partial sends, and re-enter STATE_SEND */
-				state = STATE_RECV;
-
-				continue;
-
-			case STATE_RECV:
-				r = recvecho(s, &p, &sin);
-				if (r == -1 && errno == EINTR) {
-					break;
-				}
-
-				if (r == -1) {
-					status = EXIT_FAILURE;
-					state = STATE_CULL;
+					/* TODO: buffer partial sends, and re-enter STATE_SEND */
+					state = STATE_RECV;
 					continue;
 				}
 
-				if (r == 0) {
+				break;
+
+			case STATE_RECV:
+				switch (recvecho(s, &p, &sin)) {
+				case -1:
+					if (errno == EINTR) {
+						break;
+					}
+
+					status = EXIT_FAILURE;
+					state = STATE_CULL;
+					continue;
+
+				case 0:
 					/* partial read */
+					state = STATE_SELECT;
+					continue;
+
+				case 1:
 					state = STATE_SELECT;
 					continue;
 				}
 
-				assert(r == 1);
-
-				state = STATE_SELECT;
-
-				continue;
+				break;
 
 			case STATE_SEND:
-				r = sendecho(s, &p, seq);
-				if (r == -1 && errno == EINTR) {
-					break;
-				}
+				switch (sendecho(s, &p, seq)) {
+				case -1:
+					if (errno == EINTR) {
+						break;
+					}
 
-				if (r == -1) {
 					status = EXIT_FAILURE;
 					state = STATE_CULL;
 					continue;
-				}
 
-				assert(r == 0);
+				case 0:
+					seq++;
 
-				seq++;
+					if (count != 0 && seq >= count) {
+						state = STATE_CULL;
+						continue;
+					}
 
-				if (count != 0 && seq >= count) {
-					state = STATE_CULL;
+					/* reset interval, for the next ping */
+					{
+						remaining = mstotv(interval);
+						xitimerfix(&remaining);
+					}
+
+					state = STATE_SELECT;
 					continue;
 				}
 
-				/* reset interval, for the next ping */
-				{
-					remaining = mstotv(interval);
-					xitimerfix(&remaining);
-				}
-
-				state = STATE_SELECT;
-
-				continue;
+				break;
 
 			case STATE_CULL:
 				culling = 1;
@@ -725,7 +724,6 @@ main(int argc, char **argv)
 				}
 
 				state = STATE_SELECT;
-
 				continue;
 			}
 
