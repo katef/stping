@@ -3,8 +3,8 @@
 /*
  * SOCK_STREAM echo ping. This illustrates the following effects:
  *
- * - Corruption
- * - Duplicate packets
+ * - Connectivity
+ * - Latency
  *
  * Pending responses are stored in a simple linked list; these are removed
  * either when a response is received, or on timeout. A checksum is included
@@ -19,7 +19,6 @@
 
 /*
  * TODO: document with a diagram. Examples can be a new section for docs.bp.com
- * TODO: count out-of-order packets
  * TODO: gethostbyname for argv[1]
  * TODO: any other syscalls for EINTR?
  * TODO: select can't predict the future. consider making everything non-blocking
@@ -29,7 +28,6 @@
  * TODO: option to dump packet contents, tcpdump style, for visualisation.
  * TODO: don't use stdint.h!
  * TODO: keep going if IP vanishes (e.g. by DHCP); i.e. send() fails
- * TODO: i think the timing is wrong after handling a signal (e.g. SIGINFO)
  * TODO: print the number which are pending in the stats
  */
 
@@ -481,12 +479,7 @@ main(int argc, char **argv)
 	struct sockaddr_in sin;
 	struct sigaction sigact;
 	sigset_t set;
-	int culling;
 	int status;
-
-	enum {
-		STATE_SEND, STATE_RECV, STATE_SELECT, STATE_CULL
-	} state;
 
 	sigemptyset(&set);
 	(void) sigaddset(&set, SIGINT);
@@ -593,44 +586,55 @@ main(int argc, char **argv)
 		struct timeval remaining;
 		uint16_t seq;
 
+		enum {
+			STATE_SEND, STATE_RECV, STATE_SELECT, STATE_CULL
+		} state;
+
+		/* TODO: fold together, possibly merge into 'state' */
+		int culling;	/* "not sending" */
+		int recvfailed;	/* "not receiving" */
+
 		p = NULL;
-		culling = 0;	/* TODO: merge into 'state'? */
+		culling = 0;
+		recvfailed = 0;
 		state = STATE_SEND;
 		seq = 0;
-		status = EXIT_SUCCESS;
+		status = EXIT_SUCCESS;	/* TODO: calculate from culling/recvfailed flags */
 
 		before = mstotv(interval);
 
 		while (!culling || p != NULL) {
 			fd_set rfds;
-			int r;
-
-			/* calculate remaining interval */
-			if (-1 == gettimeofday(&after, NULL)) {
-				perror("gettimeofday");
-				exit(EXIT_FAILURE);
-			}
-
-			{
-				struct timeval elapsed;
-
-				elapsed = xtimersub(&after, &before);
-				remaining = mstotv(interval);
-				remaining = xtimersub(&remaining, &elapsed);
-				xitimerfix(&remaining);
-			}
-
-			if (-1 == gettimeofday(&before, NULL)) {
-				perror("gettimeofday");
-				exit(EXIT_FAILURE);
-			}
 
 			culltimeouts(&p);
 
 			switch (state) {
 			case STATE_SELECT:
 				FD_ZERO(&rfds);
-				FD_SET(s, &rfds);
+
+				if (!recvfailed) {
+					FD_SET(s, &rfds);
+				}
+
+				if (-1 == gettimeofday(&after, NULL)) {
+					perror("gettimeofday");
+					exit(EXIT_FAILURE);
+				}
+
+				/* calculate remaining interval */
+				{
+					struct timeval elapsed;
+
+					elapsed = xtimersub(&after, &before);
+					remaining = mstotv(interval);
+					remaining = xtimersub(&remaining, &elapsed);
+					xitimerfix(&remaining);
+				}
+
+				if (-1 == gettimeofday(&before, NULL)) {
+					perror("gettimeofday");
+					exit(EXIT_FAILURE);
+				}
 
 				switch (select(s + 1, &rfds, NULL, NULL, &remaining)) {
 				case -1:
@@ -662,6 +666,8 @@ main(int argc, char **argv)
 					if (errno == EINTR) {
 						break;
 					}
+
+					recvfailed = 1;
 
 					status = EXIT_FAILURE;
 					state = STATE_CULL;
