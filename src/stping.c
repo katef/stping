@@ -499,7 +499,7 @@ main(int argc, char **argv)
 			switch (c) {
 			case 'c':
 				count = atoi(optarg);
-				if (count <= 0) {
+				if (count <= 0 || optarg[strspn(optarg, "0123456789")]) {
 					fprintf(stderr, "Invalid ping count\n");
 					return EXIT_FAILURE;
 				}
