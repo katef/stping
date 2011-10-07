@@ -36,6 +36,8 @@ struct connection {
 	struct sockaddr_storage ss;
 	int socket;
 
+	char addr[sizeof "255.255.255.255:65535"];
+
 	char buf[3 + 5 + 24 + 2];
 	size_t len;
 
@@ -85,10 +87,28 @@ newcon(struct connection **head, int s, struct sockaddr *sa, socklen_t sz)
 		return NULL;
 	}
 
+	{
+		const struct sockaddr_in *sin;
+		char addr[sizeof "255.255.255.255"];
+		unsigned port;
+
+		sin = (const void *) sa;
+
+		if (NULL == inet_ntop(sa->sa_family, &sin->sin_addr, addr, sizeof addr)) {
+			perror("inet_ntop");
+		}
+
+		port = (unsigned) ntohs(sin->sin_port);
+
+		snprintf(new->addr, sizeof new->addr, "%s:%u", addr, port);
+	}
+
 	new->socket = s;
 	new->len = sizeof new->buf - 1;
 
 	memcpy(&new->ss, sa, sz);
+
+	printf("connection from %s\n", new->addr);
 
 	new->next = *head;
 	*head = new;
@@ -125,6 +145,9 @@ removecon(struct connection **head, int s)
 	for (current = head; *current != NULL; current = &(*current)->next) {
 		if ((*current)->socket == s) {
 			tmp = *current;
+
+			printf("disconnection from %s\n", tmp->addr);
+
 			*current = (*current)->next;
 			free(tmp);
 			return;
@@ -177,8 +200,8 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 		return 0;
 	}
 
-	printf("%d bytes from %s seq=%d\n",
-		(int) strlen(conn->buf), inet_ntoa(sin->sin_addr), (int) *seq);
+	printf("%u bytes from %s seq=%d\n",
+		(unsigned) strlen(conn->buf), conn->addr, (int) *seq);
 
 	return 1;
 }
