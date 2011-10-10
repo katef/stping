@@ -724,7 +724,12 @@ main(int argc, char **argv)
 					return EXIT_FAILURE;
 				}
 
-				if (-1 == alarm(timeout * cullfactor)) {
+				if (timeout <= DBL_EPSILON || cullfactor <= DBL_EPSILON) {
+					shouldexit = 1;
+					break;
+				}
+
+				if (-1 == alarm(timeout / 1000.0 * cullfactor)) {
 					perror("alarm");
 					return EXIT_FAILURE;
 				}
@@ -748,7 +753,8 @@ main(int argc, char **argv)
 
 				if (shouldexit) {
 					shouldexit = 0;
-					culling    = 1;
+
+					state = STATE_CULL;
 				}
 			}
 		}
