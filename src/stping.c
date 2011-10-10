@@ -515,10 +515,18 @@ main(int argc, char **argv)
 
 			case 't':
 				timeout = atof(optarg) * 1000.0;
+				if (timeout <= DBL_EPSILON && optarg[strspn(optarg, "0.")]) {
+					fprintf(stderr, "Invalid ping timeout\n");
+					return EXIT_FAILURE;
+				}
 				break;
 
 			case 'u':
 				cullfactor = atof(optarg);
+				if (cullfactor <= DBL_EPSILON && optarg[strspn(optarg, "0.")]) {
+					fprintf(stderr, "Invalid cullfactor\n");
+					return EXIT_FAILURE;
+				}
 				break;
 
 			case '?':
