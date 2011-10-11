@@ -9,7 +9,7 @@
 #CFLAGS+=
 
 CC=gcc
-CFLAGS+=-Wall -pedantic -ansi -O2
+CFLAGS+=-Wall -pedantic -std=c99 -O2
 
 TARGETS=common.o
 

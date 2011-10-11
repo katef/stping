@@ -14,7 +14,7 @@
  * SIGINFO causes current statistics to be written to stderr on the fly. The
  * total statistics are also printed to stderr when pinging is complete.
  *
- * This program (and the associated daemon) targets XPG4.2, not POSIX.
+ * This program (and the associated daemon) target SUS3.
  */
 
 /*
@@ -32,7 +32,7 @@
  */
 
 #ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE 500
+# define _XOPEN_SOURCE 600
 #endif
 
 /* for SIGINFO */
@@ -203,21 +203,6 @@ tvtoms(struct timeval *tv)
 {
 	return tv->tv_usec / 1000.0 + tv->tv_sec * 1000.0;
 }
-
-#if __STDC_VERSION__ - 0 < 199901L
-int
-round(double x)
-{
-	assert(x >= LONG_MIN - 0.5);
-	assert(x <= LONG_MAX + 0.5);
-
-	if (x >= 0) {
-		return (long) (x + 0.5);
-	} else { 
-		return (long) (x - 0.5);
-	}
-}
-#endif
 
 static struct timeval
 mstotv(double ms) {

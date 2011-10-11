@@ -6,7 +6,7 @@
  */
 
 #ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE 500
+# define _XOPEN_SOURCE 600
 #endif
 
 #if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
