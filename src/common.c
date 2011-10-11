@@ -9,6 +9,11 @@
 # define _XOPEN_SOURCE 600
 #endif
 
+/* for INADDR_NONE */
+#ifdef __APPLE__
+# define _DARWIN_C_SOURCE
+#endif
+
 #if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
 # undef  HAVE_SALEN
 #elif defined(__sun)
