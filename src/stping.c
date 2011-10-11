@@ -423,7 +423,7 @@ printstats(FILE *f, int multiline)
 		stat_sent, stat_recieved, stat_timedout, stat_ignored,
 		(stat_sent - stat_recieved) * 100.0 / stat_sent);
 
-	if (stat_recieved == 0) {
+	if (stat_recieved == 0 || stat_sent - stat_timedout == 0) {
 		fprintf(f, "\n");
 		return;
 	}
