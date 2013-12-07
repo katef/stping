@@ -1,18 +1,11 @@
 /* $Id$ */
 
 /*
- * Routines common to stping and stpingd.
+ * Routines common to dgping and dgpingd.
  * TODO assertions all over
  */
 
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE 600
-#endif
-
-/* for INADDR_NONE */
-#ifdef __APPLE__
-# define _DARWIN_C_SOURCE
-#endif
+#define _XOPEN_SOURCE 600
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -186,7 +179,7 @@ getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
 	}
 
 	/* Socket */
-	s = socket(PF_INET,  SOCK_STREAM, IPPROTO_TCP);
+	s = socket(PF_INET,  SOCK_DGRAM, IPPROTO_UDP);
 	if (-1 == s) {
 		perror("socket");
 		return -1;
