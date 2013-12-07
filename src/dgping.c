@@ -72,8 +72,10 @@
 # define SIGINFO SIGPWR
 #endif
 
+#ifndef __GLIBC__
 extern char *optarg;
 extern int optind;
+#endif
 
 /*
  * The time to timeout pending responses, and the time between pings.
@@ -593,7 +595,7 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (-1 == alarm(CULLTIME)) {
+	if (-1 == (int) alarm(CULLTIME)) {
 		perror("alarm");
 		return EXIT_FAILURE;
 	}
