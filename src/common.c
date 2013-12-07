@@ -14,15 +14,6 @@
 # define _DARWIN_C_SOURCE
 #endif
 
-#if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
-# undef  HAVE_SALEN
-#elif defined(__sun)
-# undef  HAVE_SALEN
-#else
-# define HAVE_SALEN
-#endif
-
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -36,6 +27,14 @@
 #include <time.h>
 
 #include "common.h"
+
+#if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
+# undef  HAVE_SALEN
+#elif defined(__sun)
+# undef  HAVE_SALEN
+#else
+# define HAVE_SALEN
+#endif
 
 /* TODO strip unneccessary headers from *.c */
 
