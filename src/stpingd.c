@@ -180,7 +180,7 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 	}
 
 	assert(r >= 1);
-	assert(r <= conn->len);
+	assert(r <= (ssize_t) conn->len);
 
 	conn->len -= r;
 
@@ -228,7 +228,7 @@ sendecho(int s, uint16_t seq)
 		}
 
 		assert(r >= 0);
-		assert(r <= len);
+		assert(r <= (ssize_t) len);
 
 		len -= r;
 		buf += r;

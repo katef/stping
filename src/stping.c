@@ -247,7 +247,7 @@ sendecho(int s, struct pending **p, uint16_t seq)
 		}
 
 		assert(r >= 0);
-		assert(r <= len);
+		assert(r <= (ssize_t) len);
 
 		len -= r;
 		buf += r;
@@ -311,7 +311,7 @@ recvecho(int s, struct pending **p, struct sockaddr_in *sin)
 	}
 
 	assert(r >= 1);
-	assert(r <= len);
+	assert(r <= (ssize_t) len);
 
 	len -= r;
 
@@ -720,7 +720,7 @@ main(int argc, char **argv)
 					break;
 				}
 
-				if (-1 == alarm(timeout / 1000.0 * cullfactor)) {
+				if (-1 == (int) alarm(timeout / 1000.0 * cullfactor)) {
 					perror("alarm");
 					return EXIT_FAILURE;
 				}
