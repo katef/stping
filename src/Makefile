@@ -1,22 +1,10 @@
 # $Id$
 
-#CC=cc
-#CFLAGS+=
-
-CC=gcc
-CFLAGS+=-Wall -pedantic -std=c99 -O2
-
-TARGETS=common.o
-
-all: stping stpingd
-
-clean:
-	rm -f stping stpingd stping.o stpingd.o $(TARGETS)
+.include "Makefile.inc"
 
 
-stping: stping.o $(TARGETS)
-	$(CC) -o stping stping.o $(TARGETS) -lm $(LDFLAGS)
+MAKEFILES += Makefile.stping
+MAKEFILES += Makefile.stpingd
 
-stpingd: stpingd.o $(TARGETS)
-	$(CC) -o stpingd stpingd.o $(TARGETS) $(LDFLAGS)
+.include <cthru.multi.mk>
 

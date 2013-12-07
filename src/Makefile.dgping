@@ -1,0 +1,27 @@
+# $Id$
+
+.include "Makefile.inc"
+
+.include <cthru.defs.mk>
+
+
+CC_LANG = C90
+
+SRCS += dgping.c
+SRCS += common.c
+
+# For confusing struct sockaddr_in sin; with sin() from math.h
+CFLAGS := ${CFLAGS:N-Wshadow}
+CFLAGS += -Wshadow
+
+.include <cthru.obj.mk>
+
+
+PROG = dgping
+
+.if "${UNAME}" == "Linux"
+PROG_LDFLAGS += -lm
+.endif
+
+.include <cthru.prog.mk>
+
