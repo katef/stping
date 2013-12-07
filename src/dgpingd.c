@@ -106,7 +106,6 @@ main(int argc, char *argv[])
 
 	for (;;) {
 		uint16_t seq;
-		struct sockaddr_in sin;	/* TODO: scope: rename */
 
 		if (1 == recvecho(s, &seq, &sin, sizeof sin)) {
 			sendecho(s, seq, &sin);
