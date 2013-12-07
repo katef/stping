@@ -1,27 +1,27 @@
 # $Id$
 
-# This is an example SOCK_STREAM client-server application.
+# This is an example SOCK_DGRAM client-server application.
 # To build with C-THRU sockets, build with:
-#   CFLAGS=-DUSE_CTHRU LDFLAGS=-lcthru make
+#   CFLAGS=-DUSE_CTHRU make
 #
 
 #CC=cc
 #CFLAGS+=
 
 CC=gcc
-CFLAGS+=-Wall -pedantic -std=c99 -O2
+CFLAGS+=-Wall -pedantic -ansi -O2
 
 TARGETS=common.o
 
-all: stping stpingd
+all: dgping dgpingd
 
 clean:
-	rm -f stping stpingd stping.o stpingd.o $(TARGETS)
+	rm -f dgping dgpingd dgping.o dgpingd.o $(TARGETS)
 
 
-stping: stping.o $(TARGETS)
-	$(CC) -o stping stping.o $(TARGETS) -lm $(LDFLAGS)
+dgping: dgping.o $(TARGETS)
+	$(CC) -o dgping dgping.o $(TARGETS) -lm
 
-stpingd: stpingd.o $(TARGETS)
-	$(CC) -o stpingd stpingd.o $(TARGETS) $(LDFLAGS)
+dgpingd: dgpingd.o $(TARGETS)
+	$(CC) -o dgpingd dgpingd.o $(TARGETS)
 
