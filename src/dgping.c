@@ -72,11 +72,6 @@
 # define SIGINFO SIGPWR
 #endif
 
-#ifndef __GLIBC__
-extern char *optarg;
-extern int optind;
-#endif
-
 /*
  * The time to timeout pending responses, and the time between pings.
  * Both times are given in milliseconds. Culltime (given in seconds)

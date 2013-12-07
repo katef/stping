@@ -76,11 +76,6 @@
 # define SIGINFO SIGUSR1
 #endif
 
-#ifndef __GLIBC__
-extern char *optarg;
-extern int optind;
-#endif
-
 /*
  * The time to timeout pending responses, and the interval between pings.
  * Both times are given in milliseconds. The cull factor (given as a multiple
