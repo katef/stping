@@ -1,11 +1,27 @@
 /* $Id$ */
 
 /*
- * Routines common to ctping and ctpingd.
+ * Routines common to stping and stpingd.
  * TODO assertions all over
  */
 
-#define _XOPEN_SOURCE 600
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE 600
+#endif
+
+/* for INADDR_NONE */
+#ifdef __APPLE__
+# define _DARWIN_C_SOURCE
+#endif
+
+#if defined(__GNU_LIBRARY__) || defined(__GLIBC__) || defined(__sun)
+# undef  HAVE_SALEN
+#elif defined(__sun)
+# undef  HAVE_SALEN
+#else
+# define HAVE_SALEN
+#endif
+
 
 #ifdef USE_CTHRU
 #include <cthru/socket.h>
@@ -169,13 +185,16 @@ getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
 		sin->sin_family = AF_INET;
 		sin->sin_port = htons(p);
 		sin->sin_addr.s_addr = a;
+#ifdef HAVE_SALEN
+		sin->sin_len = sizeof (*sin);
+#endif
 	}
 
 	/* Socket */
 #ifdef USE_CTHRU
-	s = socket(PF_CTHRU, SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(PF_CTHRU, SOCK_STREAM, IPPROTO_TCP);
 #else
-	s = socket(PF_INET,  SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(PF_INET,  SOCK_STREAM, IPPROTO_TCP);
 #endif
 	if (-1 == s) {
 		perror("socket");
