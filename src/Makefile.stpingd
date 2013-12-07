@@ -10,16 +10,8 @@ CC_LANG = C90
 SRCS += stpingd.c
 SRCS += common.c
 
-# For confusing struct sockaddr_in sin; with sin() from math.h
-#CFLAGS := ${CFLAGS:N-Wshadow}
-#CFLAGS += -Wshadow
-
 .include <cthru.obj.mk>
 
-
-.if "${UNAME}" == "Linux"
-#PROG_LDFLAGS += -lm
-.endif
 
 PROG = stpingd
 

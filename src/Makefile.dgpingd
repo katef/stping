@@ -17,10 +17,6 @@ CFLAGS += -Wshadow
 .include <cthru.obj.mk>
 
 
-.if "${UNAME}" == "Linux"
-PROG_LDFLAGS += -lm
-.endif
-
 PROG = dgpingd
 
 .include <cthru.prog.mk>
