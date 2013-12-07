@@ -8,10 +8,6 @@
 # define _XOPEN_SOURCE 600
 #endif
 
-#ifdef USE_CTHRU
-#include <cthru/socket.h>
-#endif
-
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>

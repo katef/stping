@@ -23,10 +23,6 @@
 #endif
 
 
-#ifdef USE_CTHRU
-#include <cthru/socket.h>
-#endif
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -191,11 +187,7 @@ getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
 	}
 
 	/* Socket */
-#ifdef USE_CTHRU
-	s = socket(PF_CTHRU, SOCK_STREAM, IPPROTO_TCP);
-#else
 	s = socket(PF_INET,  SOCK_STREAM, IPPROTO_TCP);
-#endif
 	if (-1 == s) {
 		perror("socket");
 		return -1;

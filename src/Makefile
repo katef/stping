@@ -1,10 +1,5 @@
 # $Id$
 
-# This is an example SOCK_STREAM client-server application.
-# To build with C-THRU sockets, build with:
-#   CFLAGS=-DUSE_CTHRU LDFLAGS=-lcthru make
-#
-
 #CC=cc
 #CFLAGS+=
 
