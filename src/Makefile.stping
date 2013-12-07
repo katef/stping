@@ -14,10 +14,7 @@ SRCS += common.c
 
 
 PROG = stping
-
-.if "${UNAME}" == "Linux"
 PROG_LDFLAGS += -lm
-.endif
 
 .include <cthru.prog.mk>
 

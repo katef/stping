@@ -18,10 +18,7 @@ CFLAGS += -Wshadow
 
 
 PROG = dgping
-
-.if "${UNAME}" == "Linux"
 PROG_LDFLAGS += -lm
-.endif
 
 .include <cthru.prog.mk>
 
