@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * SOCK_DGRAN echo ping daemon.
+ * SOCK_DGRAM echo ping daemon.
  *
  * Ping repsonses are sent back to the source port of the ping client.
  */
