@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+]>
+
+<refentry>
+	<refentryinfo>
+		<author>
+			<firstname>Katherine</firstname>
+			<surname>Flavel</surname>
+			<affiliation>
+				<orgname>Bubblephone Ltd.</orgname>
+			</affiliation>
+		</author>
+		<authorinitials>tjf</authorinitials>
+		<title>dgping User Manual</title>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>dgpingd</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+
+	<refnamediv id="name">
+		<refname>dgpingd</refname>
+		<refpurpose>&sock_dgram; echo ping server</refpurpose>
+	</refnamediv>
+
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>dgpingd</command>
+
+			<arg choice="plain">&host.arg;</arg>
+			<arg choice="plain">&port.arg;</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+<!-- XXX: this page is written in poor style -->
+
+	<refsection>
+		<title>Description</title>
+			<para>The &dgpingd.1; server binds to the given
+				&host.arg; and &port.arg; and awaits &sock_dgram;
+				ping requests from the &dgping.1; client.</para>
+
+			<para>Responses are sent back to the the source port
+				for each message.
+				Diagnostics are output to &stderr;.</para>
+	</refsection>
+
+	<refsection>
+		<title>Options</title>
+
+		<para>None.</para>
+	</refsection>
+
+	<refsection>
+		<title>Exit Status</title>
+
+		<para>Exits <literal>&gt;0</literal> if an error occurs,
+			or <literal>0</literal> on success.</para>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&dgping.1;.</para>
+	</refsection>
+</refentry>
+

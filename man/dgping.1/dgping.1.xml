@@ -1,0 +1,169 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+	<!ENTITY c.opt "<option>-c</option> &count.arg;">
+	<!ENTITY i.opt "<option>-i</option>">
+	<!ENTITY h.opt "<option>-h</option>">
+]>
+
+<refentry>
+	<refentryinfo>
+		<author>
+			<firstname>Katherine</firstname>
+			<surname>Flavel</surname>
+			<affiliation>
+				<orgname>Bubblephone Ltd.</orgname>
+			</affiliation>
+		</author>
+		<authorinitials>tjf</authorinitials>
+		<title>dgping User Manual</title>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>dgping</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+
+	<refnamediv id="name">
+		<refname>dgping</refname>
+		<refpurpose>&sock_dgram; echo ping client</refpurpose>
+	</refnamediv>
+
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>dgping</command>
+
+			<arg choice="opt">&c.opt;</arg>
+			<arg choice="opt">&i.opt;</arg>
+
+			<arg choice="plain">&host.arg;</arg>
+			<arg choice="plain">&port.arg;</arg>
+		</cmdsynopsis>
+
+		<cmdsynopsis>
+			<command>dgping</command>
+
+			<group choice="req">
+				<arg choice="plain">&h.opt;</arg>
+			</group>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+<!-- XXX: this page is written in poor style -->
+
+	<refsection>
+		<title>Description</title>
+			<para>&dgping.1; is analog of &icmp; &ping.8; for &sock_dgram;.
+				Messages are sent to a server, &dgpingd.1;, which responds
+				back to the &dgping.1; client.</para>
+
+			<para>The client maintains a list of pending responses, and keeps
+				runing statistics. This illustrates dropped packets, corruption,
+				out of order responses and duplicate datagrams.</para>
+
+			<para>Pending responses are removed either when a response is received,
+				or on timeout. A checksum is included in the packet contents to detect
+				corruption, and a sequence number is used to identify the order of responses.</para>
+
+			<para>&siginfo; causes current statistics to be written to &stderr;.
+				The total statistics are also printed to &stderr; when pinging is complete.</para>
+	</refsection>
+
+	<refsection>
+		<title>Options</title>
+
+		<variablelist>
+			<varlistentry>
+				<term>&c.opt;</term>
+
+				<listitem>
+					<para>Specify the maximum number of ping messages to send.
+						&dgping.1; will enter culling mode after this number
+						has been sent (see &sigint; below).</para>
+
+					<para>The default is <code>0</code>, meaning to
+						continue indefinitely.
+						Negative values are not permitted.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&i.opt;</term>
+
+				<listitem>
+					<para>The interval between pings, specified in seconds.</para>
+
+					<para>The default is <code>0.5</code> meaning a ping
+						is sent every 500ms.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&h.opt;</term>
+
+				<listitem>
+					<para>Print a quick reference to these options, and exit.</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</refsection>
+
+	<refsection>
+		<title>Exit Status</title>
+
+		<para>Exits <literal>&gt;0</literal> if an error occurs,
+			or <literal>0</literal> on success.</para>
+	</refsection>
+
+	<refsection>
+		<title>Signals</title>
+
+		<variablelist>
+			<varlistentry>
+				<term><code>&sigint;</code></term>
+
+				<listitem>
+					<para>An initial &sigint; causes &dgping.1; to cease sending futher
+						ping messages, and to enter a period of culling.
+						Pending responses pings are either recieved (and accounted for),
+						or time out. &dgping.1; will exit when no pending responses remain.</para>
+
+					<para>If a further &sigint; signal is recieved whilst culling
+						pending responses, then &dgping.1; will exit immediately,
+						as if all responses had timed out.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><code>&siginfo;</code></term>
+
+				<listitem>
+					<para>Causes &dgping.1; to print current statistics to &stderr;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><code>&sigalrm;</code></term>
+
+				<listitem>
+					<para>Used internally.</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</refsection>
+
+	<refsection>
+		<title>Caveats</title>
+
+		<para>&siginfo; is not present on Linux.</para>
+
+		<para>Timing is ostensibly to millisecond resolution, but is in
+			practice only accurate to the &os; scheduler.</para>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&dgpingd.1;.</para>
+	</refsection>
+</refentry>
+
