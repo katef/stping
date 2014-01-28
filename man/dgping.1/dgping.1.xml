@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
 	<!ENTITY c.opt "<option>-c</option> &count.arg;">
-	<!ENTITY i.opt "<option>-i</option>">
+	<!ENTITY i.opt "<option>-i</option> &interval.arg;">
 	<!ENTITY h.opt "<option>-h</option>">
 ]>
 
@@ -158,6 +158,12 @@
 
 		<para>Timing is ostensibly to millisecond resolution, but is in
 			practice only accurate to the &os; scheduler.</para>
+
+		<para>There is no way to specify a timeout interval,
+			as per the <option>-t</option> option for &stping.1;.</para>
+
+		<para>There is no way to specify the cull factor,
+			as per the <option>-u</option> option for &stping.1;.</para>
 	</refsection>
 
 	<refsection>
