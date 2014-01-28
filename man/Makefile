@@ -3,8 +3,8 @@
 .include "Makefile.inc"
 
 
-SUBDIR += dgping.1
-SUBDIR += dgpingd.1
+SUBDIR += stping.1
+SUBDIR += stpingd.1
 
 .include <cthru.subdir.mk>
 
