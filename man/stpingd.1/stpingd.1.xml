@@ -4,16 +4,18 @@
 
 <refentry>
 	<refentryinfo>
-		<author>
-			<firstname>Katherine</firstname>
-			<surname>Flavel</surname>
-			<affiliation>
-				<orgname>Bubblephone Ltd.</orgname>
-			</affiliation>
-		</author>
-		<authorinitials>tjf</authorinitials>
 		<title>stping User Manual</title>
 		<productname>stping</productname>
+
+		<authorgroup>
+			<author>
+				<firstname>Katherine</firstname>
+				<surname>Flavel</surname>
+				<affiliation>
+					<orgname>Bubblephone Ltd.</orgname>
+				</affiliation>
+			</author>
+		</authorgroup>
 	</refentryinfo>
 
 	<refmeta>
