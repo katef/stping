@@ -197,5 +197,12 @@
 
 		<para>&stpingd.1;.</para>
 	</refsection>
+
+	<refsection>
+		<title>History</title>
+
+		<para>stpingd was designed and implemented
+			by &katherine.flavel; for &bubblephone.ltd;</para>
+	</refsection>
 </refentry>
 

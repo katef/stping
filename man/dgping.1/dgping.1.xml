@@ -174,5 +174,12 @@
 
 		<para>&dgpingd.1;.</para>
 	</refsection>
+
+	<refsection>
+		<title>History</title>
+
+		<para>dgping was designed and implemented
+			by &katherine.flavel; for &bubblephone.ltd;</para>
+	</refsection>
 </refentry>
 
