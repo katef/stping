@@ -155,6 +155,8 @@ recvecho(struct connection **head, int s, uint16_t *seq, struct sockaddr_in *sin
 	struct connection *conn;
 	ssize_t r;
 
+	(void) sin;
+
 	assert(head != NULL);
 
 	conn = findcon(head, s);
