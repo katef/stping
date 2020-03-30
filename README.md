@@ -5,6 +5,8 @@
 for `SOCK_DGRAM` (UDP)
 and `SOCK_STREAM` (TCP).
 
+![A photo of stping and dgping running on two computers](man/img/rppng3.jpeg)
+
 Run either daemon to listen for packets on a particular port:
 
     ; ./dgpingd 127.0.0.1 2108
