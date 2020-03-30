@@ -463,7 +463,7 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	s = getaddr(argv[0], argv[1], &sin);
+	s = getaddr(argv[0], argv[1], &sin, SOCK_DGRAM, IPPROTO_UDP);
 	if (-1 == s) {
 		return EXIT_FAILURE;
 	}

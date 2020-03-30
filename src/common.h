@@ -25,7 +25,8 @@ validate(const char *in, uint16_t *seq);
  * a newly-created socket is returned, or -1 on error.
  */
 int
-getaddr(const char *addr, const char *port, struct sockaddr_in *sin);
+getaddr(const char *addr, const char *port, struct sockaddr_in *sin,
+	int type, int protocol);
 
 #endif
 

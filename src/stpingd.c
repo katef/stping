@@ -251,7 +251,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	s = getaddr(argv[1], argv[2], &sin);
+	s = getaddr(argv[1], argv[2], &sin, SOCK_STREAM, IPPROTO_TCP);
 	if (-1 == s) {
 		return EXIT_FAILURE;
 	}

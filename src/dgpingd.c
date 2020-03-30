@@ -82,7 +82,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	s = getaddr(argv[1], argv[2], &sin);
+	s = getaddr(argv[1], argv[2], &sin, SOCK_DGRAM, IPPROTO_UDP);
 	if (-1 == s) {
 		return EXIT_FAILURE;
 	}

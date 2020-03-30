@@ -134,7 +134,8 @@ validate(const char *in, uint16_t *seq)
 
 /* See common.h */
 int
-getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
+getaddr(const char *addr, const char *port, struct sockaddr_in *sin,
+	int type, int protocol)
 {
 	in_addr_t a;
 	in_port_t p;
@@ -177,7 +178,7 @@ getaddr(const char *addr, const char *port, struct sockaddr_in *sin)
 	}
 
 	/* Socket */
-	s = socket(PF_INET,  SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(PF_INET,  type, protocol);
 	if (-1 == s) {
 		perror("socket");
 		return -1;
