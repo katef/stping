@@ -144,6 +144,9 @@
 
 		<para>Exits <literal>&gt;0</literal> if an error occurs,
 			or <literal>0</literal> on success.</para>
+
+		<para>Exits <literal>&gt;0</literal> if the expected ping count
+			is not met, or if any pings timed out.</para>
 	</refsection>
 
 	<refsection>

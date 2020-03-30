@@ -745,6 +745,14 @@ main(int argc, char **argv)
 	fprintf(stdout, "\n- STREAM Ping Statistics -\n");
 	printstats(stdout, 1);
 
-	return status;
+	if (count > 0 && stat_recieved != count) {
+		exit(EXIT_FAILURE);
+	}
+
+	if (status == EXIT_FAILURE) {
+		exit(EXIT_FAILURE);
+	}
+
+	return stat_timedout;
 }
 

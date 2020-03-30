@@ -604,7 +604,10 @@ main(int argc, char **argv)
 	fprintf(stdout, "\n- DGRAM Ping Statistics -\n");
 	printstats(stdout, 1);
 
-	/* NOTREACHED */
-	return EXIT_FAILURE;
+	if (count > 0 && stat_recieved != count) {
+		exit(EXIT_FAILURE);
+	}
+
+	return stat_timedout;
 }
 
