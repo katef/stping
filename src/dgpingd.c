@@ -1,5 +1,3 @@
-/* $Id$ */
-
 /*
  * SOCK_DGRAM echo ping daemon.
  *

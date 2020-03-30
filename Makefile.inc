@@ -1,5 +1,3 @@
-# $Id$
-
 .if !defined(SRCDIRPEFIX)
 . if !defined(_SRCDIRPREFIX_RELATIVE)
 SRCDIRPREFIX!=	cd ${.CURDIR} && pwd

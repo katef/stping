@@ -1,5 +1,3 @@
-/* $Id$ */
-
 /*
  * SOCK_DGRAM echo ping. This illustrates the following effects:
  *

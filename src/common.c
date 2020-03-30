@@ -1,5 +1,3 @@
-/* $Id$ */
-
 /*
  * Routines common to dgping and dgpingd.
  * TODO assertions all over

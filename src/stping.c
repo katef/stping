@@ -1,5 +1,3 @@
-/* $Id$ */
-
 /*
  * SOCK_STREAM echo ping. This illustrates the following effects:
  *
