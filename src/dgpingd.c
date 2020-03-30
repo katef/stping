@@ -4,7 +4,7 @@
  * Ping repsonses are sent back to the source port of the ping client.
  */
 
-#define _XOPEN_SOURCE 600
+#define _GNU_SOURCE
 
 #include <sys/socket.h>
 #include <netinet/in.h>

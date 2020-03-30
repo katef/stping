@@ -4,9 +4,7 @@
  * Ping repsonses are sent back to the source port of the ping client.
  */
 
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE 600
-#endif
+#define _XOPEN_SOURCE 600
 
 #include <sys/socket.h>
 #include <sys/select.h>

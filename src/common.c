@@ -3,7 +3,7 @@
  * TODO assertions all over
  */
 
-#define _XOPEN_SOURCE 600
+#define _GNU_SOURCE
 
 #include <sys/socket.h>
 #include <netinet/in.h>

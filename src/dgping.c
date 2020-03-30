@@ -34,7 +34,7 @@
  * TODO: print the number which are pending in the stats
  */
 
-#define _XOPEN_SOURCE 600
+#define _GNU_SOURCE
 
 /* for SIGINFO */
 #if defined(__APPLE__)

@@ -11,8 +11,6 @@
  *
  * SIGINFO causes current statistics to be written to stderr on the fly. The
  * total statistics are also printed to stderr when pinging is complete.
- *
- * This program (and the associated daemon) target SUS3.
  */
 
 /*
@@ -29,9 +27,7 @@
  * TODO: print the number which are pending in the stats
  */
 
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE 600
-#endif
+#define _XOPEN_SOURCE 600
 
 /* for SIGINFO */
 #if defined(__APPLE__)
