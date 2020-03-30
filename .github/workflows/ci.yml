@@ -25,5 +25,8 @@ jobs:
     - name: make
       run: ${{ matrix.make }} -r -j 2 CC=${{ matrix.cc }}
 
+    - name: test
+      run: ${{ matrix.make }} -r -j 2 test
+
     - name: install
       run: ${{ matrix.make }} -r -j 2 PREFIX=/tmp/p install

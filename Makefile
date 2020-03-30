@@ -26,3 +26,15 @@ SUBDIR += src
 .include <install.mk>
 .include <clean.mk>
 
+test:: ${BUILD}/bin/dgping ${BUILD}/bin/dgpingd
+	${BUILD}/bin/dgpingd 127.0.0.1 9876 & echo $$! > /tmp/dgping.${.MAKE.PID}; sleep 1
+	${BUILD}/bin/dgping -c 3 -i 0.1 127.0.0.1 9876
+	kill $$(cat /tmp/dgping.${.MAKE.PID})
+	rm /tmp/dgping.${.MAKE.PID}
+
+test:: ${BUILD}/bin/stping ${BUILD}/bin/stpingd
+	${BUILD}/bin/stpingd 127.0.0.1 9877 & echo $$! > /tmp/stping.${.MAKE.PID}; sleep 1
+	${BUILD}/bin/stping -c 3 -i 0.1 127.0.0.1 9877
+	kill $$(cat /tmp/stping.${.MAKE.PID})
+	rm /tmp/stping.${.MAKE.PID}
+
