@@ -23,6 +23,8 @@
 # undef  HAVE_SALEN
 #elif defined(__sun)
 # undef  HAVE_SALEN
+#elif defined(__EMSCRIPTEN__)
+# undef  HAVE_SALEN
 #else
 # define HAVE_SALEN
 #endif
