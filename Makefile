@@ -26,6 +26,9 @@ SUBDIR += src
 .include <install.mk>
 .include <clean.mk>
 
+# wasmtime isn't packaged for github's ubuntu, so we can't run this in CI there
+.if !${CC:T:Memcc}
+
 test:: ${BUILD}/bin/dgping ${BUILD}/bin/dgpingd
 	${BUILD}/bin/dgpingd 127.0.0.1 9876 & echo $$! > /tmp/dgping.${.MAKE.PID}; sleep 1
 	${BUILD}/bin/dgping -c 3 -i 0.1 127.0.0.1 9876
@@ -37,4 +40,6 @@ test:: ${BUILD}/bin/stping ${BUILD}/bin/stpingd
 	${BUILD}/bin/stping -c 3 -i 0.1 127.0.0.1 9877
 	kill $$(cat /tmp/stping.${.MAKE.PID})
 	rm /tmp/stping.${.MAKE.PID}
+
+.endif
 
