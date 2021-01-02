@@ -109,9 +109,11 @@ static void
 sighandler(int s)
 {
 	switch (s) {
+#ifndef __EMSCRIPTEN__
 	case SIGINFO:
 		shouldinfo = 1;
 		break;
+#endif
 
 	case SIGINT:
 		shouldexit = 1;
@@ -455,8 +457,10 @@ main(int argc, char **argv)
 
 	sigemptyset(&set);
 	(void) sigaddset(&set, SIGINT);
-	(void) sigaddset(&set, SIGINFO);
 	(void) sigaddset(&set, SIGALRM);
+#ifndef __EMSCRIPTEN__
+	(void) sigaddset(&set, SIGINFO);
+#endif
 
 	sigact.sa_handler = sighandler;
 	sigact.sa_mask    = set;
@@ -537,10 +541,12 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+#ifndef __EMSCRIPTEN__
 	if (-1 == sigaction(SIGINFO, &sigact, NULL)) {
 		perror("sigaction");
 		return EXIT_FAILURE;
 	}
+#endif
 
 	if (-1 == sigaction(SIGINT, &sigact, NULL)) {
 		perror("sigaction");
