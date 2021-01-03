@@ -21,6 +21,16 @@
 
 #include "common.h"
 
+/*
+ * Workaround for inline assembly in glibc confusing MSan
+ */
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#undef FD_ZERO
+#define FD_ZERO(p) memset((p), 0, sizeof *(p))
+#endif
+#endif
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /*

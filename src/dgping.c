@@ -63,6 +63,16 @@
 #include "common.h"
 
 /*
+ * Workaround for inline assembly in glibc confusing MSan
+ */
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#undef FD_ZERO
+#define FD_ZERO(p) memset((p), 0, sizeof *(p))
+#endif
+#endif
+
+/*
  * Linux defines SIGINFO as "A synonym for SIGPWR" according to signal(7), but
  * does not actually #define it in <signal.h>.
  */
