@@ -281,8 +281,8 @@ main(int argc, char *argv[])
 		maxfd = s;
 
 		for (;;) {
-			int i;
 			fd_set curr;
+			int i;
 
 			curr = master;
 
@@ -302,11 +302,16 @@ main(int argc, char *argv[])
 
 				peer = accept(s, (struct sockaddr *) &ss, &size);
 				if (peer < 0) {
-					perror ("accept"); 
+					perror("accept"); 
 					return EXIT_FAILURE;
 				}
 
 				assert(size <= sizeof ss);
+
+				if (peer > FD_SETSIZE) {
+					printf("too many peers; rejecting new connection from %d\n", peer);
+					close(peer);
+				}
 
 				new = newcon(&head, peer, (struct sockaddr *) &ss, size);
 				if (new == NULL) {
@@ -314,6 +319,7 @@ main(int argc, char *argv[])
 				}
 
 				FD_SET(peer, &master); 
+				FD_CLR(peer, &curr); /* just to ensure the bit is present */
 				maxfd = MAX(maxfd, peer);
 			}
 
